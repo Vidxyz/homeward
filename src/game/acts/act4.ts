@@ -18,7 +18,7 @@ import type { ActFrame, ActInstance, ActModule } from './types';
 const palette = PALETTES[3];
 
 const ACTIVE = 0.35;
-const STRIKE_HALF_WIDTH = 10;
+const STRIKE_HALF_WIDTH = 7.5; // Scylla's strikes are 15 px wide: three quarters of their original width
 const LOGS_FROM = 0.65; // thrown wreckage starts this far through the act
 const LOG_EVERY = 3.2;
 const FOLLOW_AHEAD = 200; // the screen is never more than this far behind a player who runs ahead
@@ -235,11 +235,11 @@ class StraitAct implements ActInstance {
         r.rect(s.x - STRIKE_HALF_WIDTH, 0, STRIKE_HALF_WIDTH * 2, VIEW_H, palette.hazard, 0.08 + 0.22 * k);
         r.rect(s.x - STRIKE_HALF_WIDTH, 170, STRIKE_HALF_WIDTH * 2, 3, palette.hazard, 0.9);
       } else if (s.age < s.warn + ACTIVE) {
-        r.rect(s.x - 6, 0, 12, 150, '#241c1c');
-        r.rect(s.x - 12, 150, 24, 18, '#3d3535');
-        r.rect(s.x - 8, 154, 3, 3, palette.accent);
-        r.rect(s.x + 5, 154, 3, 3, palette.accent);
-        for (let i = 0; i < 4; i++) r.rect(s.x - 10 + i * 6, 166, 3, 4, '#f2f2f2');
+        r.rect(s.x - 4.5, 0, 9, 150, '#241c1c'); // the neck
+        r.rect(s.x - 9, 150, 18, 18, '#3d3535'); // the head, as wide as the strike
+        r.rect(s.x - 6, 154, 2, 3, palette.accent);
+        r.rect(s.x + 4, 154, 2, 3, palette.accent);
+        for (let i = 0; i < 4; i++) r.rect(s.x - 7.5 + i * 4.5, 166, 2, 4, '#f2f2f2');
       }
     }
 

@@ -371,6 +371,33 @@ describe('double jump', () => {
   });
 });
 
+describe('Act 4 strike width', () => {
+  /** Does an active strike centred at x=500 kill a player whose left edge is at `playerX`? */
+  function hitAt(playerX: number): boolean {
+    const s = new Session(4);
+    const inst = s.inst as unknown as { grace: number; camX: number; strikes: { x: number; age: number; warn: number }[]; nextVolley: number };
+    inst.grace = 0;
+    inst.camX = 400;
+    inst.nextVolley = 1e9;
+    inst.strikes = [{ x: 500, age: 1.0, warn: 0.9 }]; // active
+    s.player.x = playerX;
+    s.player.y = 60; // in the air for this one tick: no other way to die
+    s.update(DT, NO_INPUT);
+    return s.deaths > 0;
+  }
+
+  it('is 15 px wide (three quarters of the old 20 px): a player just outside it is safe', () => {
+    expect(hitAt(500 + 7.5 + 0.2)).toBe(false); // left edge just beyond the right side of the strike
+    expect(hitAt(500 - 7.5 - 10 - 0.2)).toBe(false); // right edge just short of the left side
+  });
+
+  it('still kills a player who overlaps it', () => {
+    expect(hitAt(500)).toBe(true);
+    expect(hitAt(500 + 7)).toBe(true);
+    expect(hitAt(500 - 7.5 - 10 + 0.5)).toBe(true);
+  });
+});
+
 describe('Act 4 sprint', () => {
   it('holding ACTION while running makes the player faster, and drains the stamina bar', () => {
     const walk = new Session(4);
