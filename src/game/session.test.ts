@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ACTS } from './acts';
 import { Session, type SessionEvent } from './session';
 import { NO_INPUT, type InputState } from './types';
 
@@ -132,5 +133,22 @@ describe('Session (Act 5)', () => {
     s.player.x = s.level.goal.x;
     s.player.y = s.level.goal.y;
     expect(run(s, 2)).toContainEqual({ type: 'complete', act: 5, deaths: 0 });
+  });
+});
+
+describe('every act', () => {
+  it('has exactly five acts with unique ids', () => {
+    expect(ACTS.map((a) => a.id)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it.each([1, 2, 3, 4, 5])('act %i loads and survives 20 s of play without throwing', (n) => {
+    const s = new Session(n);
+    expect(s.level.checkpoints.length).toBeGreaterThanOrEqual(n === 5 ? 0 : 1);
+    for (let i = 0; i < 1200; i++) {
+      s.update(DT, i % 120 < 60 ? right : NO_INPUT);
+      expect(Number.isFinite(s.player.x)).toBe(true);
+      expect(Number.isFinite(s.player.y)).toBe(true);
+      expect(Number.isFinite(s.camera.x)).toBe(true);
+    }
   });
 });
