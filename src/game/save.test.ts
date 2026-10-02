@@ -26,8 +26,8 @@ describe('save', () => {
 
   it('round-trips data', () => {
     const s = memoryStorage();
-    writeSave({ furthestAct: 3, deaths: 12, muted: true }, s);
-    expect(loadSave(s)).toEqual({ furthestAct: 3, deaths: 12, muted: true });
+    writeSave({ furthestAct: 3, deaths: 12, muted: true, runSeconds: 321.5, runValid: true }, s);
+    expect(loadSave(s)).toEqual({ furthestAct: 3, deaths: 12, muted: true, runSeconds: 321.5, runValid: true });
   });
 
   it('falls back to defaults on corrupt JSON', () => {
@@ -36,7 +36,19 @@ describe('save', () => {
 
   it('clamps out-of-range values', () => {
     const s = memoryStorage(JSON.stringify({ furthestAct: 99, deaths: -5, muted: 'yes' }));
-    expect(loadSave(s)).toEqual({ furthestAct: 5, deaths: 0, muted: false });
+    expect(loadSave(s)).toEqual({ furthestAct: 5, deaths: 0, muted: false, runSeconds: 0, runValid: false });
+  });
+
+  it('treats a save from before runs were timed as a practice journey', () => {
+    const s = memoryStorage(JSON.stringify({ furthestAct: 3, deaths: 4, muted: false }));
+    const loaded = loadSave(s);
+    expect(loaded.runValid).toBe(false);
+    expect(loaded.runSeconds).toBe(0);
+  });
+
+  it('a fresh game starts a valid run', () => {
+    expect(DEFAULT_SAVE.runValid).toBe(true);
+    expect(DEFAULT_SAVE.runSeconds).toBe(0);
   });
 
   it('never throws when storage is blocked', () => {
