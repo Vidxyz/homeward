@@ -37,6 +37,11 @@ function strung(): BowGame {
 }
 
 describe('stringing the bow', () => {
+  it('has a green zone that is fairly narrow, and centred in the meter\'s upper part', () => {
+    expect(GREEN_MAX - GREEN_MIN).toBeCloseTo(0.14);
+    expect((GREEN_MIN + GREEN_MAX) / 2).toBeCloseTo(0.81);
+  });
+
   it('releasing inside the green zone strings it', () => {
     const g = new BowGame();
     const events = drawFor(g, ((GREEN_MIN + GREEN_MAX) / 2) / 0.55);

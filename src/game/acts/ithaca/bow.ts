@@ -2,8 +2,8 @@ export type BowStage = 'draw' | 'aim' | 'shot' | 'won';
 export type BowEvent = 'strung' | 'weak' | 'slipped' | 'hit' | 'miss';
 
 export const DRAW_RATE = 0.55; // tension per second while ACTION is held
-export const GREEN_MIN = 0.72;
-export const GREEN_MAX = 0.9;
+export const GREEN_MIN = 0.74; // the green zone is 14% of the meter wide, centred on 0.81
+export const GREEN_MAX = 0.88;
 const SLIP_AT = 1.0;
 export const BASE_TOLERANCE = 0.12;
 const MERCY = 0.04; // the target widens a little after each miss
