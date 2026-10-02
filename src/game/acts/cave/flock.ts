@@ -124,7 +124,8 @@ export class Flock {
     if (!s.moving) return;
     const nx = s.x + s.dir * GRAZE_SPEED * dt;
     const frontX = s.dir > 0 ? nx + SHEEP_W : nx;
-    const blocked = world.solid(Math.floor(frontX / TILE), 9) || Math.abs(nx - s.home) > ROAM;
+    const frontCol = Math.floor(frontX / TILE);
+    const blocked = world.solid(frontCol, 9) || !world.solid(frontCol, 10) || Math.abs(nx - s.home) > ROAM;
     if (blocked) s.dir = s.dir === 1 ? -1 : 1;
     else s.x = nx;
   }

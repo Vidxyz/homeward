@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { makeWorld } from '../engine/world';
 import { parseLevel } from '../level';
-import { canSee, isFullyInShadow, lineOfSight } from './stealth';
+import { canSee, isFullyInShadow, isHiddenInShadow, lineOfSight } from './stealth';
 
 function worldOf(rows: string[]) {
   return makeWorld(parseLevel(rows));
@@ -67,5 +67,27 @@ describe('isFullyInShadow', () => {
 
   it('is false in plain light', () => {
     expect(isFullyInShadow(level, { x: 100, y: 2, w: 10, h: 14 })).toBe(false);
+  });
+});
+
+describe('isHiddenInShadow', () => {
+  const level = parseLevel(['S.HHH..G', '########']);
+  const inside = { x: 40, y: 2, w: 10, h: 14 };
+
+  it('hides a player who is still or creeping inside a shadow', () => {
+    expect(isHiddenInShadow(level, inside, 0, false)).toBe(true);
+    expect(isHiddenInShadow(level, inside, 36, false)).toBe(true);
+  });
+
+  it('does not hide a player who is running through a shadow', () => {
+    expect(isHiddenInShadow(level, inside, 90, false)).toBe(false);
+  });
+
+  it('does not hide a player in a shadow that a brazier is lighting up', () => {
+    expect(isHiddenInShadow(level, inside, 0, true)).toBe(false);
+  });
+
+  it('does not hide a player who is not fully inside', () => {
+    expect(isHiddenInShadow(level, { x: 28, y: 2, w: 10, h: 14 }, 0, false)).toBe(false);
   });
 });

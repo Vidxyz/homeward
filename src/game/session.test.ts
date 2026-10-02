@@ -97,8 +97,19 @@ describe('Session (Act 1, sailing)', () => {
   });
 });
 
-describe('Session (Act 2)', () => {
-  it('loads, lets the player idle behind the Cyclops, and stays finite', () => {
+interface CaveInternals {
+  phase: 1 | 2;
+  cyclops: { x: number; dir: 1 | -1; mood: string; blind: boolean };
+  flock: { sheep: { x: number; moving: boolean; timer: number; nextBleat: number; cooldown: number }[] };
+  giants: { x: number; awake: boolean }[];
+  fallers: { x: number; state: string }[];
+  dog: { x: number };
+}
+const cave = (s: Session) => s.inst as unknown as CaveInternals;
+const FLOOR_STAND_Y = 10 * 16 - 14;
+
+describe('Session (Act 2, phase 1: sneaking in)', () => {
+  it('loads, and lets the player idle at the start without being caught', () => {
     const s = new Session(2);
     run(s, 600);
     expect(s.deaths).toBe(0);
@@ -107,28 +118,189 @@ describe('Session (Act 2)', () => {
 
   it('kills a player standing in the open in front of him', () => {
     const s = new Session(2);
-    run(s, 100); // let the post-spawn grace period (1.5 s) expire; he is now near col 33, facing right
-    s.player.x = 43 * 16; // inside his 150 px sight range, in the open (the nearest shadow zone is cols 38-40)
-    s.player.y = 10 * 16 - 14;
-    run(s, 120); // 0.7 s of exposure fills the meter
+    run(s, 100); // let the post-spawn grace period (1.5 s) expire
+    cave(s).cyclops.x = 480;
+    cave(s).cyclops.dir = 1;
+    s.player.x = 36 * 16 + 4; // ~100px in front of him, clear line of sight, not in a shadow
+    s.player.y = FLOOR_STAND_Y;
+    run(s, 150);
     expect(s.deaths).toBeGreaterThanOrEqual(1);
   });
 
-  it('does not kill a player standing fully inside a shadow, with no button held', () => {
+  it('hides a player who stands still fully inside a shadow', () => {
     const s = new Session(2);
-    s.player.x = 38 * 16 + 20; // inside the shadow zone at cols 38-40
-    s.player.y = 10 * 16 - 14;
+    s.player.x = 38 * 16 + 20; // inside the shadow at cols 38-40
+    s.player.y = FLOOR_STAND_Y;
     run(s, 400);
     expect(s.deaths).toBe(0);
   });
 
-  it('still kills a player who is only half in a shadow', () => {
+  it('does not hide a player who runs through a shadow', () => {
     const s = new Session(2);
-    run(s, 100); // let the post-spawn grace expire; he is near col 33, facing right
-    s.player.x = 40 * 16 + 10; // right edge (x+10) crosses out of the zone (cols 38-40) into the light
-    s.player.y = 10 * 16 - 14;
-    run(s, 120);
+    run(s, 100);
+    cave(s).cyclops.x = 500; // to the left of the shadow (cols 38-40), facing it
+    cave(s).cyclops.dir = 1;
+    let died = false;
+    s.player.x = 38 * 16 + 4;
+    s.player.y = FLOOR_STAND_Y;
+    for (let i = 0; i < 120 && !died; i++) {
+      if (s.player.x > 40 * 16 - 12) s.player.x = 38 * 16 + 4; // keep running, but stay inside the shadow
+      cave(s).cyclops.x = 500;
+      s.update(DT, { ...NO_INPUT, right: true });
+      died = s.deaths > 0;
+    }
+    expect(died).toBe(true);
+  });
+
+  it('holding ACTION makes the player creep slowly', () => {
+    const fast = new Session(2);
+    const slow = new Session(2);
+    run(fast, 60, right);
+    run(slow, 60, { ...NO_INPUT, right: true, action: true });
+    expect(fast.player.x - 35).toBeGreaterThan(2 * (slow.player.x - 35));
+  });
+
+  it('sheep block the player, and bumping one makes it bleat', () => {
+    const s = new Session(2);
+    const sheep = cave(s).flock.sheep[0];
+    sheep.nextBleat = 1e9;
+    s.player.x = sheep.x - 25;
+    s.player.y = FLOOR_STAND_Y;
+    const events: SessionEvent[] = [];
+    for (let i = 0; i < 60; i++) {
+      sheep.timer = 1e9;
+      sheep.moving = false;
+      events.push(...s.update(DT, right));
+    }
+    expect(s.player.x + s.player.w).toBeLessThanOrEqual(sheep.x + 2);
+    expect(events).toContainEqual({ type: 'sfx', name: 'bleat' });
+  });
+
+  it('a stalactite drops on someone who stands beneath it', () => {
+    const s = new Session(2);
+    const f = cave(s).fallers[0];
+    s.player.x = f.x - 5;
+    s.player.y = FLOOR_STAND_Y;
+    run(s, 200);
+    expect(s.deaths).toBeGreaterThanOrEqual(1); // crushed (the stalactite resets when you respawn)
+  });
+
+  it('a stalactite leaves someone who keeps walking unharmed, but the crash is heard', () => {
+    const s = new Session(2);
+    run(s, 100);
+    const f = cave(s).fallers[0];
+    s.player.x = f.x - 40;
+    s.player.y = FLOOR_STAND_Y;
+    const events: SessionEvent[] = [];
+    for (let i = 0; i < 150; i++) events.push(...s.update(DT, right));
+    expect(events).toContainEqual({ type: 'sfx', name: 'crash' });
+    expect(s.deaths).toBe(0);
+  });
+
+  it('the dog sniffs out a player who lingers near it, and barks', () => {
+    const s = new Session(2);
+    const events: SessionEvent[] = [];
+    s.player.x = cave(s).dog.x;
+    s.player.y = FLOOR_STAND_Y;
+    for (let i = 0; i < 90; i++) {
+      s.player.x = cave(s).dog.x + 10;
+      s.player.y = FLOOR_STAND_Y;
+      events.push(...s.update(DT, NO_INPUT));
+    }
+    expect(events).toContainEqual({ type: 'sfx', name: 'bark' });
+  });
+
+  it('a sleeping giant wakes when the player runs close by', () => {
+    const s = new Session(2);
+    const g = cave(s).giants[0];
+    expect(g.awake).toBe(false);
+    s.player.x = g.x - 70;
+    s.player.y = FLOOR_STAND_Y;
+    run(s, 40, right);
+    expect(g.awake).toBe(true);
+  });
+});
+
+describe('Session (Act 2, phase 2: the escape)', () => {
+  function afterStake(): Session {
+    const s = new Session(2);
+    const events: SessionEvent[] = [];
+    s.player.x = 89 * 16;
+    s.player.y = FLOOR_STAND_Y;
+    events.push(...s.update(DT, NO_INPUT));
+    expect(events).toContainEqual({ type: 'sfx', name: 'howl' });
+    return s;
+  }
+
+  it('taking the stake blinds him and starts phase 2', () => {
+    const s = afterStake();
+    expect(cave(s).phase).toBe(2);
+    expect(cave(s).cyclops.blind).toBe(true);
+  });
+
+  it('the flock stampedes once he is blinded', () => {
+    const s = afterStake();
+    const x0 = cave(s).flock.sheep.map((sh) => sh.x);
+    run(s, 60);
+    const moved = cave(s).flock.sheep.filter((sh, i) => sh.x > x0[i] + 20).length;
+    expect(moved).toBeGreaterThanOrEqual(cave(s).flock.sheep.length - 2);
+  });
+
+  it('running makes the blind Cyclops hunt towards you; creeping does not', () => {
+    const loud = afterStake();
+    run(loud, 200); // he recovers from the stun
+    cave(loud).cyclops.x = 1760;
+    cave(loud).flock.sheep.length = 0; // no flock cover
+    loud.player.x = 1860;
+    loud.player.y = FLOOR_STAND_Y;
+    for (let i = 0; i < 10; i++) loud.update(DT, { ...NO_INPUT, left: true });
+    expect(cave(loud).cyclops.mood).toBe('hunt');
+
+    const quiet = afterStake();
+    run(quiet, 200);
+    cave(quiet).cyclops.x = 1760;
+    cave(quiet).flock.sheep.length = 0;
+    quiet.player.x = 1860;
+    quiet.player.y = FLOOR_STAND_Y;
+    for (let i = 0; i < 60; i++) quiet.update(DT, { ...NO_INPUT, left: true, action: true });
+    expect(cave(quiet).cyclops.mood).not.toBe('hunt');
+  });
+
+  it('standing among the flock hides the sound of running', () => {
+    const s = afterStake();
+    run(s, 200);
+    cave(s).cyclops.x = 1760;
+    const sheep = cave(s).flock.sheep;
+    s.player.x = 1860;
+    s.player.y = FLOOR_STAND_Y;
+    for (let i = 0; i < 10; i++) {
+      sheep[0].x = s.player.x + 20; // a sheep right beside the player
+      s.update(DT, { ...NO_INPUT, left: true });
+    }
+    expect(cave(s).cyclops.mood).not.toBe('hunt');
+  });
+
+  it('the blind Cyclops catches someone who stays beside him', () => {
+    const s = afterStake();
+    run(s, 200);
+    const c = cave(s).cyclops;
+    s.player.x = c.x + 5;
+    s.player.y = FLOOR_STAND_Y;
+    run(s, 5);
     expect(s.deaths).toBeGreaterThanOrEqual(1);
+  });
+
+  it('respawns in phase 2 (the stake stays taken), with the Cyclops stunned again', () => {
+    const s = afterStake();
+    run(s, 200);
+    const c = cave(s).cyclops;
+    s.player.x = c.x + 5;
+    s.player.y = FLOOR_STAND_Y;
+    for (let i = 0; i < 20 && s.deaths === 0; i++) s.update(DT, NO_INPUT);
+    expect(s.deaths).toBe(1);
+    run(s, 60);
+    expect(cave(s).phase).toBe(2);
+    expect(cave(s).cyclops.mood).toBe('stunned');
   });
 });
 
@@ -197,71 +369,5 @@ describe('every act', () => {
       expect(Number.isFinite(s.player.y)).toBe(true);
       expect(Number.isFinite(s.camera.x)).toBe(true);
     }
-  });
-});
-
-interface CaveInternals {
-  x: number;
-  dir: 1 | -1;
-  mood: string;
-  hear(x: number): void;
-  sheep: { x: number; moving: boolean; timer: number; cooldown: number; bleatFor: number }[];
-}
-
-describe('Session (Act 2, erratic Cyclops and sheep)', () => {
-  it('paces erratically: he reverses direction several times and stays inside the cave', () => {
-    const s = new Session(2);
-    const cave = s.inst as unknown as CaveInternals;
-    let changes = 0;
-    let last = cave.dir;
-    let minX = Infinity;
-    let maxX = -Infinity;
-    for (let i = 0; i < 60 * 120; i++) {
-      s.player.x = 5 * 16 + 20; // keep the player hidden-ish and out of the way
-      s.update(DT, { ...NO_INPUT, action: true });
-      if (cave.dir !== last) {
-        changes++;
-        last = cave.dir;
-      }
-      minX = Math.min(minX, cave.x);
-      maxX = Math.max(maxX, cave.x);
-    }
-    expect(changes).toBeGreaterThanOrEqual(6);
-    expect(minX).toBeGreaterThanOrEqual(8 * 16 - 0.01);
-    expect(maxX).toBeLessThanOrEqual(128 * 16 + 0.01);
-  });
-
-  it('goes to investigate a noise he can hear, and ignores one that is too far away', () => {
-    const s = new Session(2);
-    const cave = s.inst as unknown as CaveInternals;
-    cave.x = 800;
-    cave.hear(1200);
-    expect(cave.mood).toBe('investigate');
-    run(s, 60);
-    expect(cave.x).toBeGreaterThan(830);
-
-    const far = new Session(2);
-    const farCave = far.inst as unknown as CaveInternals;
-    farCave.x = 200;
-    farCave.hear(1800);
-    expect(farCave.mood).toBe('walk');
-  });
-
-  it('sheep block the player, and bumping one makes it bleat', () => {
-    const s = new Session(2);
-    const cave = s.inst as unknown as CaveInternals;
-    const sheep = cave.sheep[0];
-    sheep.moving = false;
-    sheep.timer = 1e9;
-    s.player.x = sheep.x - 25;
-    s.player.y = 10 * 16 - 14;
-    const events: SessionEvent[] = [];
-    for (let i = 0; i < 60; i++) {
-      sheep.timer = 1e9;
-      sheep.moving = false;
-      events.push(...s.update(DT, right));
-    }
-    expect(s.player.x + s.player.w).toBeLessThanOrEqual(sheep.x + 2);
-    expect(events).toContainEqual({ type: 'sfx', name: 'bleat' });
   });
 });

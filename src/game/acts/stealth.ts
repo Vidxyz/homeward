@@ -38,3 +38,16 @@ export function isFullyInShadow(level: Level, b: { x: number; y: number; w: numb
   for (let c = left; c <= right; c++) if (tileAt(level, c, row) !== 'H') return false;
   return true;
 }
+
+/** Above this horizontal speed (px/s) the player is moving too fast to stay hidden, even in shadow. */
+export const HIDE_MAX_SPEED = 40;
+
+/** Hidden = fully inside a shadow, standing still or creeping, and not lit by a brazier. */
+export function isHiddenInShadow(
+  level: Level,
+  b: { x: number; y: number; w: number; h: number },
+  speed: number,
+  lit: boolean,
+): boolean {
+  return !lit && speed <= HIDE_MAX_SPEED && isFullyInShadow(level, b);
+}
