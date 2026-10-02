@@ -6,6 +6,8 @@ export interface Entry {
   deaths: number;
   /** ISO date the run was finished. */
   date: string;
+  /** True for a run played from the start; false if it skipped ahead (so its time is not comparable). */
+  full: boolean;
 }
 
 export type SortKey = 'time' | 'deaths';
@@ -54,6 +56,11 @@ export function rankOf(list: Entry[], entry: Entry, by: SortKey): number {
   return ranked(list, by, list.length).indexOf(entry) + 1;
 }
 
+/** The runs that can be fairly compared: those played from the start. */
+export function fullRuns(list: Entry[]): Entry[] {
+  return list.filter((e) => e.full);
+}
+
 export function addEntry(list: Entry[], entry: Entry): Entry[] {
   return [...list, entry].slice(-MAX_ENTRIES);
 }
@@ -69,6 +76,7 @@ function parseEntry(v: unknown): Entry | null {
     seconds,
     deaths: Math.floor(deaths),
     date: typeof o.date === 'string' ? o.date : '',
+    full: o.full !== false, // an entry from before this field existed was a full run
   };
 }
 

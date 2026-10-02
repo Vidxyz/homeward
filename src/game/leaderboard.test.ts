@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { BOARD_KEY, addEntry, cleanName, formatTime, loadBoard, rankOf, ranked, saveBoard, type Entry } from './leaderboard';
+import { BOARD_KEY, addEntry, cleanName, formatTime, fullRuns, loadBoard, rankOf, ranked, saveBoard, type Entry } from './leaderboard';
 
-const e = (name: string, seconds: number, deaths: number, date = '2026-10-02T10:00:00Z'): Entry => ({ name, seconds, deaths, date });
+const e = (name: string, seconds: number, deaths: number, date = '2026-10-02T10:00:00Z', full = true): Entry => ({ name, seconds, deaths, date, full });
 
 function memoryStorage(initial?: string) {
   const map = new Map<string, string>();
@@ -108,5 +108,22 @@ describe('load and save', () => {
     ]);
     const board = loadBoard(memoryStorage(raw));
     expect(board.map((x) => x.name)).toEqual(['ok', 'Anonymous']);
+  });
+});
+
+describe('full and partial runs', () => {
+  it('an older entry with no `full` field counts as a full run', () => {
+    const raw = JSON.stringify([{ name: 'Old', seconds: 100, deaths: 1, date: 'x' }]);
+    expect(loadBoard(memoryStorage(raw))[0].full).toBe(true);
+  });
+
+  it('keeps the full flag when loading', () => {
+    const raw = JSON.stringify([{ name: 'P', seconds: 20, deaths: 0, date: 'x', full: false }]);
+    expect(loadBoard(memoryStorage(raw))[0].full).toBe(false);
+  });
+
+  it('fullRuns keeps only the comparable runs', () => {
+    const list = [e('a', 600, 5), e('b', 20, 0, 'd', false), e('c', 700, 2)];
+    expect(fullRuns(list).map((x) => x.name)).toEqual(['a', 'c']);
   });
 });

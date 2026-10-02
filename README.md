@@ -13,7 +13,7 @@ Every act is unlocked from the start: pick one on the title screen, or open the 
 
 Controls: arrows or WASD to move, Space/Up/Z to jump, X/S/Shift for the action button, P or Esc to pause (the pause screen has a Main menu button).
 
-Leaderboard: finish the game from a New Journey (or by starting Act I from the picker) and you can save your total play time and lives lost under a name. The board is stored in this browser only, and can be sorted by fastest time or fewest deaths (lower is better, the other number breaks ties). Runs that skip ahead with the act picker are practice and are not offered to the board. On touch devices, on-screen buttons appear.
+Leaderboard: when you finish the game you can always save your total play time and lives lost under a name. A run played from the start (New Journey, or Act I from the picker) goes on the main board. A run that skipped ahead is saved as a partial run (it counts only the acts you played) and only shows under "All runs". The board is stored in this browser only, and can be sorted by fastest time or fewest deaths (lower is better, the other number breaks ties).
 
 ## The five acts
 

@@ -8,6 +8,7 @@ import {
   addEntry,
   cleanName,
   formatTime,
+  fullRuns,
   loadBoard,
   rankOf,
   ranked,
@@ -15,7 +16,7 @@ import {
   type Entry,
   type SortKey,
 } from '@/game/leaderboard';
-import { afterActCompleted, finishedRun, skipAhead, startRun } from '@/game/run';
+import { afterActCompleted, afterGameFinished, finishedRun, skipAhead, startRun } from '@/game/run';
 import { DEFAULT_SAVE, loadSave, writeSave, type SaveData } from '@/game/save';
 import { ENDING_LINES, ROMAN } from '@/game/story';
 import type { Key } from '@/game/types';
@@ -55,6 +56,7 @@ export default function Homeward() {
   const [muted, setMuted] = useState(false);
   const [board, setBoard] = useState<Entry[]>([]);
   const [boardView, setBoardView] = useState<SortKey>('time');
+  const [fullOnly, setFullOnly] = useState(true);
   const [pending, setPending] = useState<Entry | null>(null); // the finished run, awaiting a name
   const [saved, setSaved] = useState<Entry | null>(null); // the entry just added to the board
   const [nameInput, setNameInput] = useState('');
@@ -82,11 +84,11 @@ export default function Homeward() {
       onActComplete: (a, d, seconds) => {
         setDeaths(d);
         if (a >= ACTS.length) {
-          // The journey is over: offer the run to the leaderboard (if it counts), and close it so replaying
-          // the last act from Continue cannot be submitted a second time.
+          // The journey is over: always offer the run to the leaderboard (marked partial if it skipped ahead),
+          // and reset the counters so replaying the last act from Continue starts a fresh partial run.
           setPending(finishedRun({ ...saveRef.current, deaths: d }, '', seconds, new Date()));
           setSaved(null);
-          persist({ deaths: d, runValid: false });
+          persist(afterGameFinished());
           setScreen('ending');
         } else {
           const next = Math.max(saveRef.current.furthestAct, a + 1);
@@ -283,14 +285,15 @@ export default function Homeward() {
                 </button>
               </form>
             )}
-            {saved && (
+            {pending && !pending.full && !saved && (
+              <p className="hint">You skipped ahead, so this is saved as a partial run (shown under All runs, not the main board).</p>
+            )}
+            {saved && saved.full && (
               <p className="hint">
-                Saved! #{rankOf(board, saved, 'time')} fastest · #{rankOf(board, saved, 'deaths')} fewest deaths
+                Saved! #{rankOf(fullRuns(board), saved, 'time')} fastest · #{rankOf(fullRuns(board), saved, 'deaths')} fewest deaths
               </p>
             )}
-            {!pending && !saved && (
-              <p className="hint">Practice run: you skipped ahead, so it is not on the leaderboard. Start a New Journey to set a time.</p>
-            )}
+            {saved && !saved.full && <p className="hint">Saved as a partial run. Start a New Journey to set a time for the main board.</p>}
             <div className="row">
               <button className="chip" onClick={() => setScreen('leaderboard')}>
                 Leaderboard
@@ -312,9 +315,14 @@ export default function Homeward() {
               <button className="chip" aria-pressed={boardView === 'deaths'} onClick={() => setBoardView('deaths')}>
                 Fewest deaths
               </button>
+              <button className="chip" aria-pressed={!fullOnly} onClick={() => setFullOnly((v) => !v)}>
+                {fullOnly ? 'Full runs only' : 'All runs'}
+              </button>
             </div>
-            {board.length === 0 ? (
-              <p className="hint">No runs yet. Finish the game from a New Journey to set a time.</p>
+            {(fullOnly ? fullRuns(board) : board).length === 0 ? (
+              <p className="hint">
+                {fullOnly ? 'No full runs yet. Finish the game from a New Journey to set a time.' : 'No runs yet.'}
+              </p>
             ) : (
               <table className="board">
                 <thead>
@@ -326,10 +334,13 @@ export default function Homeward() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ranked(board, boardView).map((e, i) => (
+                  {ranked(fullOnly ? fullRuns(board) : board, boardView).map((e, i) => (
                     <tr key={`${e.date}-${i}`} className={e === saved ? 'mine' : undefined}>
                       <td>{i + 1}</td>
-                      <td>{e.name}</td>
+                      <td>
+                        {e.name}
+                        {!e.full && <span className="tag"> (partial)</span>}
+                      </td>
                       <td>{formatTime(e.seconds)}</td>
                       <td>{e.deaths}</td>
                     </tr>
