@@ -83,3 +83,26 @@ describe('Session (Act 2)', () => {
     expect(s.deaths).toBe(0);
   });
 });
+
+describe('Session (Act 3)', () => {
+  it('pulls an idle player backwards but keeps them on the pier', () => {
+    const s = new Session(3);
+    run(s, 600);
+    expect(s.deaths).toBe(0);
+    expect(s.player.x).toBeGreaterThanOrEqual(0);
+  });
+
+  it('a well-timed ACTION press suppresses the pull', () => {
+    const protectedRun = new Session(3);
+    protectedRun.player.x = 140;
+    const x0 = protectedRun.player.x;
+    // Press just before the second beat at t = 1.6 s (frame 94 is t ~ 1.58).
+    for (let i = 0; i < 100; i++) {
+      protectedRun.update(DT, i === 94 ? { ...NO_INPUT, action: true, actionPressed: true } : NO_INPUT);
+    }
+    const unprotected = new Session(3);
+    unprotected.player.x = 140;
+    for (let i = 0; i < 100; i++) unprotected.update(DT, NO_INPUT);
+    expect(x0 - protectedRun.player.x).toBeLessThan(x0 - unprotected.player.x);
+  });
+});
