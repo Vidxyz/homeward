@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ACTS } from './acts';
+import { layoutAct1 } from './acts/act1';
+import { gapTop } from './acts/sea';
 import { Session, type SessionEvent } from './session';
 import { NO_INPUT, type InputState } from './types';
 
@@ -35,21 +37,31 @@ describe('Session (Act 1, sailing)', () => {
     expect(s.player.y).toBeGreaterThan(y0);
   });
 
-  it('wrecks the ship on a reef, then respawns at the spawn', () => {
+  it('wrecks the ship on a reef wall, then respawns at the spawn', () => {
     const s = new Session(1);
-    let rock: { c: number; r: number } | null = null;
-    for (let r = 0; r < s.level.rows && !rock; r++) {
-      const c = s.level.tiles[r].indexOf('#');
-      if (c >= 0) rock = { c, r };
-    }
-    expect(rock).not.toBeNull();
-    s.player.x = rock!.c * 16 - 40;
-    s.player.y = rock!.r * 16 + 2;
-    for (let i = 0; i < 90 && s.deaths === 0; i++) s.update(DT, right);
+    const wall = layoutAct1().barriers[0];
+    s.player.x = wall.col * 16 - 30;
+    s.player.y = 4; // high up, well inside the upper reef (the gap never rises above y=24)
+    for (let i = 0; i < 120 && s.deaths === 0; i++) s.update(DT, right);
     expect(s.deaths).toBe(1);
     run(s, 60);
     expect(s.deaths).toBe(1);
     expect(Math.abs(s.player.x - (s.level.spawn.x + 3))).toBeLessThan(2);
+  });
+
+  it('lets the ship through when it is lined up with the moving gap', () => {
+    const s = new Session(1);
+    const wall = layoutAct1().barriers[0];
+    s.player.x = wall.col * 16 - 120;
+    let passed = false;
+    for (let i = 0; i < 60 * 8 && !passed && s.deaths === 0; i++) {
+      // Steer to the middle of the gap as it is right now.
+      const aim = gapTop(wall, s.time) + (wall.gapH * 16) / 2 - s.player.h / 2;
+      s.update(DT, { ...NO_INPUT, right: true, jump: s.player.y > aim + 1.5, action: s.player.y < aim - 1.5 });
+      if (s.player.x > wall.col * 16 + 40) passed = true;
+    }
+    expect(passed).toBe(true);
+    expect(s.deaths).toBe(0);
   });
 
   it('emits a checkpoint sound and respawns there afterwards', () => {
@@ -60,13 +72,14 @@ describe('Session (Act 1, sailing)', () => {
     const events = run(s, 2);
     expect(events).toContainEqual({ type: 'sfx', name: 'checkpoint' });
 
-    s.player.y = 500; // out of bounds is clamped; put the ship inside a reef instead
-    const rockCol = s.level.tiles[0].indexOf('#');
-    s.player.x = rockCol * 16;
-    s.player.y = 0;
+    const wall = layoutAct1().barriers.find((b) => b.col * 16 > cp.x)!;
+    s.player.x = wall.col * 16 - 20;
+    s.player.y = 4;
+    for (let i = 0; i < 120 && s.deaths === 0; i++) s.update(DT, right);
+    expect(s.deaths).toBe(1);
     run(s, 90);
-    expect(s.deaths).toBeGreaterThanOrEqual(1);
-    expect(Math.abs(s.player.x - (cp.x + 3))).toBeLessThan(2);
+    expect(Math.abs(s.player.x - (cp.x + 3))).toBeLessThan(15); // the current drifts an idle ship a little
+    expect(s.player.x).toBeGreaterThan(s.level.spawn.x + 100); // ...but it is clearly at the checkpoint, not the spawn
   });
 
   it('completes the act when the shore is reached and then stops updating', () => {

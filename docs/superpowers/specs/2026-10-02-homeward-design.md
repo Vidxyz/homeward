@@ -48,8 +48,8 @@ Each unit has one purpose and is testable alone.
 
 Each act is a level file plus a small module implementing its twist.
 
-1. **The Storm** — Sailing (revised after first playtest). The player steers a ship in four directions across a storm-tossed sea, threading gaps in rows of reef and avoiding telegraphed lightning; the swell shoves the ship about. Up/Down use the jump/action keys. Reaching the shore ends the act.
-2. **The Cyclops' Cave** — Stealth (revised after first playtest). Polyphemus paces erratically (walks, reverses, stops to look around) and has a line of sight; the player uses shadows. A flock of sheep wanders the floor as solid obstacles; bumping one makes it bleat, and the Cyclops hears and investigates.
+1. **The Storm** — Sailing (revised after first playtest). The player steers a ship in four directions across a storm-tossed sea, threading gaps in reef walls (the gaps slide up and down), avoiding telegraphed lightning; a layered, uneven current and sudden telegraphed gusts shove the ship about. Up/Down use the jump/action keys. Reaching the shore ends the act.
+2. **The Cyclops' Cave** — Stealth (revised after first playtest). Polyphemus paces erratically (walks, reverses, stops to look around) and has a line of sight; the player uses shadows. The player hides by standing fully inside a shadow (no button). A flock of sheep wanders the floor as solid obstacles; bumping one makes it bleat, and the Cyclops hears and investigates.
 3. **The Sirens** — Resistance. A pull force drags the player toward the song; resisting means timing movement to a rhythm cue.
 4. **Scylla and Charybdis** — Chase. Auto-scrolling strait with a whirlpool pulling backward on one side and strikes from the other.
 5. **Ithaca** — Return. No hazards, a slow walk home, a short ending, and the death counter revealed.

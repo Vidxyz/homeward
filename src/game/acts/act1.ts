@@ -8,6 +8,7 @@ import type { Renderer } from '../engine/renderer';
 import { makeWorld } from '../engine/world';
 import { TILE, VIEW_H, VIEW_W, type InputState, type SfxName, type Vec } from '../types';
 import { mulberry32 } from './pathGen';
+import { BARRIER_W, gapTop, gustPush, shipHitsBarrier, swellAt, type Barrier } from './sea';
 import type { ActFrame, ActInstance, ActModule } from './types';
 
 const palette = PALETTES[0];
@@ -23,29 +24,46 @@ const BOLT_WARN = 1.0;
 const BOLT_FLASH = 0.25;
 const BOLT_RADIUS = 22;
 
+const GUST_WARN = 0.5;
+const GUST_DURATION = 1.2;
+
+interface Layout {
+  rows: string[];
+  barriers: Barrier[];
+}
+
 /**
- * A sea chart: rows of reef (`#`) with a gap the ship must find, loose rocks in the open water between,
- * checkpoint buoys (`C`) inside some gaps, and a shore at the far end (`G` column, then land).
+ * The sea chart. Reef walls are not tiles: each is a `Barrier` whose gap slides up and down.
+ * The tile map holds only the loose rocks, the buoy gates (`C`), the start, and the shore.
  */
-export function buildAct1(): string[] {
+export function layoutAct1(): Layout {
   const b = new LevelBuilder(220, 12);
   const rng = mulberry32(11);
   b.put(3, 6, 'S');
 
+  const barriers: Barrier[] = [];
   let gapRow = 5;
   let n = 0;
   for (let col = 16; col < 176; col += 9 + Math.floor(rng() * 3)) {
     const progress = (col - 16) / 160;
     const gapH = progress < 0.35 ? 4 : 3;
     gapRow = Math.min(11 - gapH, Math.max(1, gapRow + Math.floor(rng() * 9) - 4));
-    for (let r = 0; r < 12; r++) if (r < gapRow || r >= gapRow + gapH) b.rect(col, r, 2, 1, '#');
+    barriers.push({
+      col,
+      baseY: gapRow * TILE,
+      gapH,
+      amp: 24 + rng() * 16,
+      speed: 0.6 + progress * 0.6 + rng() * 0.3,
+      phase: rng() * Math.PI * 2,
+    });
+
     // A buoy gate on the interior rows of the gap, so a respawn always has clear water on both sides.
     if (n % 3 === 2) for (let r = gapRow + 1; r <= gapRow + gapH - 2; r++) b.put(col - 2, r, 'C');
     // Loose rocks in the open water just past the reef, kept out of the lane the gap opens onto.
     const loose = 1 + Math.floor(rng() * 3);
     for (let i = 0; i < loose; i++) {
       const rr = 1 + Math.floor(rng() * 10);
-      if (rr >= gapRow - 1 && rr <= gapRow + gapH) continue;
+      if (rr >= gapRow - 2 && rr <= gapRow + gapH + 1) continue;
       b.rect(col + 4 + Math.floor(rng() * 2), rr, 1 + Math.floor(rng() * 2), 1, '#');
     }
     n++;
@@ -53,7 +71,11 @@ export function buildAct1(): string[] {
 
   for (let r = 0; r < 12; r++) b.put(197, r, 'G');
   b.rect(198, 0, 22, 12, '#'); // the shore
-  return b.toRows();
+  return { rows: b.toRows(), barriers };
+}
+
+export function buildAct1(): string[] {
+  return layoutAct1().rows;
 }
 
 interface Bolt {
@@ -61,6 +83,12 @@ interface Bolt {
   y: number;
   age: number;
   thundered: boolean;
+}
+
+interface Gust {
+  dir: 1 | -1;
+  strength: number;
+  age: number; // starts negative: the warning period
 }
 
 function approach(v: number, target: number, delta: number): number {
@@ -72,10 +100,15 @@ class StormAct implements ActInstance {
   private t = 0;
   private bolts: Bolt[] = [];
   private nextBolt = 4;
+  private gust: Gust | null = null;
+  private nextGust = 5;
   private readonly rng = mulberry32(21);
   private readonly landX: number;
 
-  constructor(private readonly level: Level) {
+  constructor(
+    private readonly level: Level,
+    private readonly barriers: Barrier[],
+  ) {
     this.world = makeWorld(level);
     this.landX = level.goal.x + TILE;
   }
@@ -107,40 +140,63 @@ class StormAct implements ActInstance {
       }
     }
     this.bolts = this.bolts.filter((bolt) => bolt.age < BOLT_WARN + BOLT_FLASH + 0.2);
+
+    // Sudden gusts shove the ship up or down; a short ripple warns of them first.
+    if (this.gust) {
+      this.gust.age += dt;
+      if (this.gust.age > GUST_DURATION) this.gust = null;
+    } else {
+      this.nextGust -= dt;
+      if (this.nextGust <= 0 && player.x > 12 * TILE) {
+        this.gust = { dir: this.rng() < 0.5 ? 1 : -1, strength: 35 + this.rng() * 25, age: -GUST_WARN };
+        this.nextGust = 2.5 + this.rng() * 4;
+      }
+    }
     return { push: 0, kill: struck, sfx };
   }
 
-  /** Sailing: free movement in four directions (Up = jump key, Down = action key), shoved by the swell. */
+  /** Sailing: free movement in four directions (Up = jump key, Down = action key), shoved by the current. */
   drive(dt: number, player: Body, input: InputState): { died: boolean } {
     player.px = player.x;
     player.py = player.y;
-    const tx = (Number(input.right) - Number(input.left)) * MAX_VX;
-    const swell = Math.sin(this.t * 1.1 + player.x * 0.012) * 14;
-    const ty = (Number(input.action) - Number(input.jump)) * MAX_VY + swell;
+    const cur = swellAt(player.x, this.t);
+    const gust = this.gust ? this.gust.dir * gustPush(this.gust.age, GUST_DURATION, this.gust.strength) : 0;
+    const tx = (Number(input.right) - Number(input.left)) * MAX_VX + cur.vx;
+    const ty = (Number(input.action) - Number(input.jump)) * MAX_VY + cur.vy + gust;
     player.vx = approach(player.vx, tx, ACCEL * dt);
     player.vy = approach(player.vy, ty, ACCEL * dt);
     if (input.right) player.facing = 1;
     player.onGround = false;
 
     player.x = Math.max(0, player.x + player.vx * dt);
-    let died = this.hitsRock(player);
     player.y = Math.min(VIEW_H - 4 - player.h, Math.max(4, player.y + player.vy * dt));
-    died = died || this.hitsRock(player);
-    return { died };
+    return { died: this.hitsRock(player) || this.hitsReef(player) };
+  }
+
+  private hitbox(b: Body) {
+    return { x: b.x + 3, y: b.y + 2, w: b.w - 6, h: b.h - 4 };
   }
 
   private hitsRock(b: Body): boolean {
-    const c0 = Math.floor((b.x + 3) / TILE);
-    const c1 = Math.floor((b.x + b.w - 3) / TILE);
-    const r0 = Math.floor((b.y + 2) / TILE);
-    const r1 = Math.floor((b.y + b.h - 2) / TILE);
+    const h = this.hitbox(b);
+    const c0 = Math.floor(h.x / TILE);
+    const c1 = Math.floor((h.x + h.w) / TILE);
+    const r0 = Math.floor(h.y / TILE);
+    const r1 = Math.floor((h.y + h.h) / TILE);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (this.world.solid(c, r)) return true;
     return false;
+  }
+
+  private hitsReef(b: Body): boolean {
+    const h = this.hitbox(b);
+    return this.barriers.some((bar) => shipHitsBarrier(h, bar, this.t));
   }
 
   reset(_respawn: Vec): number | undefined {
     this.bolts = [];
     this.nextBolt = 3;
+    this.gust = null;
+    this.nextGust = 4;
     return undefined;
   }
 
@@ -170,10 +226,40 @@ class StormAct implements ActInstance {
     r.ridge(palette.mid, 80, 6, 0.04, 0.8, camX, this.t, 1.9);
     r.ridge(palette.far, 130, 6, 0.035, 1.0, camX, this.t, 1.3);
     streaks(r, this.t, { count: 50, color: palette.foam, vx: -45, vy: 0, len: 8, alpha: 0.22 });
+
+    for (const bar of this.barriers) {
+      const x = bar.col * TILE;
+      if (x + BARRIER_W < camX - 4 || x > camX + VIEW_W + 4) continue;
+      this.drawBarrier(r, bar, x);
+    }
   }
 
-  drawFront(r: Renderer, camX: number, camY: number): void {
-    // Surf on the reef edges.
+  private drawBarrier(r: Renderer, bar: Barrier, x: number): void {
+    const top = Math.round(gapTop(bar, this.t));
+    const bottom = top + bar.gapH * TILE;
+    r.rect(x, 0, BARRIER_W, top, palette.solid); // upper reef
+    r.rect(x, top - 3, BARRIER_W, 3, palette.solidDark);
+    r.rect(x + 6, Math.max(0, top - 30), 4, 3, palette.solidDark);
+    r.rect(x, bottom, BARRIER_W, VIEW_H - bottom, palette.solid); // lower reef
+    r.rect(x, bottom, BARRIER_W, 3, palette.solidTop);
+    r.rect(x + 18, bottom + 14, 4, 3, palette.solidDark);
+    r.rect(x - 1, 0, 1, top, palette.foam, 0.5); // surf along the reef edges
+    r.rect(x + BARRIER_W, 0, 1, top, palette.foam, 0.5);
+    r.rect(x - 1, bottom, 1, VIEW_H - bottom, palette.foam, 0.5);
+    r.rect(x + BARRIER_W, bottom, 1, VIEW_H - bottom, palette.foam, 0.5);
+  }
+
+  /** A small V (pointing down) or inverted V (pointing up), in screen space. */
+  private drawChevron(r: Renderer, x: number, y: number, dir: 1 | -1, alpha: number): void {
+    for (let k = 0; k < 6; k++) {
+      const yy = dir > 0 ? y + k : y + (5 - k);
+      r.screenRect(x - 6 + k, yy, 2, 2, '#ffffff', alpha);
+      r.screenRect(x + 4 - k, yy, 2, 2, '#ffffff', alpha);
+    }
+  }
+
+  drawFront(r: Renderer, camX: number): void {
+    // Surf on the loose rocks.
     const c0 = Math.max(0, Math.floor(camX / TILE));
     const c1 = Math.min(this.level.cols - 1, Math.floor((camX + VIEW_W) / TILE));
     for (let row = 0; row < this.level.rows; row++) {
@@ -205,24 +291,39 @@ class StormAct implements ActInstance {
         r.screenRect(0, 0, VIEW_W, VIEW_H, '#ffffff', 0.14);
       }
     }
+
+    // A gust: chevrons on both edges point the way it will push, faint while it gathers and bold while it blows.
+    if (this.gust) {
+      const blowing = this.gust.age >= 0;
+      const alpha = blowing ? 0.7 : 0.3;
+      const drift = (this.t * 90 * this.gust.dir) % 56;
+      for (const sx of [14, VIEW_W - 14]) {
+        for (let i = -1; i < 5; i++) {
+          this.drawChevron(r, sx, i * 56 + drift + (this.gust.dir > 0 ? 0 : 56), this.gust.dir, alpha);
+        }
+      }
+    }
+
     streaks(r, this.t, { count: 40, color: '#9fc3d1', vx: -30, vy: 300, len: 4, alpha: 0.4 });
 
     if (this.t < 9) {
-      r.text('Arrows steer the ship. Find the gaps in the reef.', VIEW_W / 2, 30, '#ffffff', 1, 'center', Math.min(1, 9 - this.t));
+      r.text('Arrows steer the ship. Slip through the moving gaps.', VIEW_W / 2, 30, '#ffffff', 1, 'center', Math.min(1, 9 - this.t));
     }
   }
 }
+
+const layout = layoutAct1();
 
 export const act1: ActModule = {
   id: 1,
   name: 'The Storm',
   intro: [
     'Ten years the war took. Ten more, the sea will take.',
-    "Poseidon's storm has scattered your fleet. One ship remains, and the reefs are everywhere.",
+    "Poseidon's storm has scattered your fleet. One ship remains, and the reefs shift with the tide.",
     'Steer for the shore.',
   ],
   palette,
   music: TRACKS[0],
-  level: parseLevel(buildAct1()),
-  create: (level) => new StormAct(level),
+  level: parseLevel(layout.rows),
+  create: (level) => new StormAct(level, layout.barriers),
 };
