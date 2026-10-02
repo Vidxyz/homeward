@@ -33,10 +33,14 @@ export class Renderer {
   }
 
   circle(x: number, y: number, radius: number, color: string, fill = false, alpha = 1): void {
+    this.screenCircle(x + this.ox, y + this.oy, radius, color, fill, alpha);
+  }
+
+  screenCircle(x: number, y: number, radius: number, color: string, fill = false, alpha = 1): void {
     const c = this.ctx;
     c.globalAlpha = alpha;
     c.beginPath();
-    c.arc(Math.round(x + this.ox), Math.round(y + this.oy), radius, 0, Math.PI * 2);
+    c.arc(Math.round(x), Math.round(y), radius, 0, Math.PI * 2);
     if (fill) {
       c.fillStyle = color;
       c.fill();

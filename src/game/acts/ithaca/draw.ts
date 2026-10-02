@@ -118,7 +118,7 @@ export function drawBowStage(r: Renderer, g: BowGame, t: number): void {
       const ax = 108 + i * 14;
       r.screenRect(ax - 1, ringY - 20, 3, 40, '#6a5648'); // handle
       r.screenRect(ax - 3, ringY - 22, 7, 5, '#b8b8b8'); // head
-      r.circle(ax, ringY, 4, '#ffd166', false, 0.9);
+      r.screenCircle(ax, ringY, 5, '#ffd166', false, 0.95);
     }
     const span = 44; // px of marker travel per 1.0 of aim
     // The target band: dead centre, widening after misses.

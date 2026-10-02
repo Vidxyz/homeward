@@ -19,7 +19,7 @@ Controls: arrows or WASD to move, Space/Up/Z to jump, X/S/Shift for the action b
 2. **The Cyclops' Cave**: two parts. Sneak to his den past an erratic giant, a sheepdog, sleeping giants, falling stalactites and flaring braziers (shadows hide you only if you are still or creeping; hold ACTION to creep), then take the stake to blind him and escape while he hunts by sound. Running, jumping and landing are loud; the stampeding flock masks the noise.
 3. **The Sirens**: resist the song's pull by pressing ACTION on the beat.
 4. **Scylla and Charybdis**: an accelerating auto-scrolling chase. Scylla aims where you are going (stopping doesn't help) and escalates from single strikes to patterns, cracked platforms crumble underfoot, the whirlpool drags at you, spikes need hopping, and late on Charybdis hurls wreckage along the rocks.
-5. **Ithaca**: the walk home.
+5. **Ithaca**: the road home (Argos knows you), then the suitors' hall. Go in as a beggar: if a suitor sees you running, jumping or walking tall you lose your disguise, so hold ACTION to stoop (it tires you). Then string the great bow (hold ACTION, release in the green) and shoot through the twelve axes (press JUMP when the marker lines up).
 
 ## Develop
 
