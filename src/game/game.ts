@@ -8,7 +8,8 @@ import { TILE, VIEW_H, VIEW_W } from './types';
 
 export interface GameEvents {
   onDeath(deaths: number): void;
-  onActComplete(act: number, deaths: number): void;
+  /** `seconds` is the play time spent in the act just completed (pauses and menus excluded). */
+  onActComplete(act: number, deaths: number, seconds: number): void;
 }
 
 const STEP = 1 / 60;
@@ -101,7 +102,7 @@ export class Game {
         this.running = false;
         this.audio.stopMusic();
         this.input.releaseAll();
-        this.events.onActComplete(e.act, e.deaths);
+        this.events.onActComplete(e.act, e.deaths, this.session.time);
       }
     }
   }

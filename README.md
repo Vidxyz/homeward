@@ -11,7 +11,9 @@ pnpm dev        # http://localhost:3000
 
 Every act is unlocked from the start: pick one on the title screen, or open the pause menu and choose Main menu. The intro cards have a Back button too.
 
-Controls: arrows or WASD to move, Space/Up/Z to jump, X/S/Shift for the action button, Esc or P to pause. On touch devices, on-screen buttons appear.
+Controls: arrows or WASD to move, Space/Up/Z to jump, X/S/Shift for the action button, P or Esc to pause (the pause screen has a Main menu button).
+
+Leaderboard: finish the game from a New Journey (or by starting Act I from the picker) and you can save your total play time and lives lost under a name. The board is stored in this browser only, and can be sorted by fastest time or fewest deaths (lower is better, the other number breaks ties). Runs that skip ahead with the act picker are practice and are not offered to the board. On touch devices, on-screen buttons appear.
 
 ## The five acts
 

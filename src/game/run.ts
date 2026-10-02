@@ -12,11 +12,11 @@ export function afterActCompleted(save: SaveData, actSeconds: number): Pick<Save
 }
 
 /**
- * Starting at an act with the picker. Act I is just a fresh run; anything later skips ahead, so the run
- * can no longer be compared with others and becomes practice.
+ * Starting at an act with the picker. Act I restarts the run (the "Continue" point is left alone); anything
+ * later skips ahead, so the run can no longer be compared with others and becomes practice.
  */
-export function skipAhead(act: number): Pick<SaveData, 'runValid'> | ReturnType<typeof startRun> {
-  return act === 1 ? startRun() : { runValid: false };
+export function skipAhead(act: number): Partial<SaveData> {
+  return act === 1 ? { deaths: 0, runSeconds: 0, runValid: true } : { runValid: false };
 }
 
 /** The leaderboard entry for a run that has just been finished (act V included), or null for a practice run. */

@@ -18,8 +18,8 @@ describe('run tracking', () => {
     expect(skipAhead(5)).toEqual({ runValid: false });
   });
 
-  it('starting from Act I with the picker is a fresh run', () => {
-    expect(skipAhead(1)).toEqual(startRun());
+  it('starting from Act I with the picker restarts the run without touching the Continue point', () => {
+    expect(skipAhead(1)).toEqual({ deaths: 0, runSeconds: 0, runValid: true });
   });
 });
 

@@ -1,14 +1,26 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { ACTS } from '@/game/acts';
 import type { Input } from '@/game/engine/input';
 import { Game } from '@/game/game';
+import {
+  addEntry,
+  cleanName,
+  formatTime,
+  loadBoard,
+  rankOf,
+  ranked,
+  saveBoard,
+  type Entry,
+  type SortKey,
+} from '@/game/leaderboard';
+import { afterActCompleted, finishedRun, skipAhead, startRun } from '@/game/run';
 import { DEFAULT_SAVE, loadSave, writeSave, type SaveData } from '@/game/save';
 import { ENDING_LINES, ROMAN } from '@/game/story';
 import type { Key } from '@/game/types';
 
-type Screen = 'title' | 'narration' | 'playing' | 'paused' | 'ending';
+type Screen = 'title' | 'narration' | 'playing' | 'paused' | 'ending' | 'leaderboard';
 
 function TouchButton({ k, label, getInput }: { k: Key; label: string; getInput: () => Input | null }) {
   const press = (down: boolean) => (e: ReactPointerEvent) => {
@@ -41,6 +53,11 @@ export default function Homeward() {
   const [deaths, setDeaths] = useState(0);
   const [furthest, setFurthest] = useState(1);
   const [muted, setMuted] = useState(false);
+  const [board, setBoard] = useState<Entry[]>([]);
+  const [boardView, setBoardView] = useState<SortKey>('time');
+  const [pending, setPending] = useState<Entry | null>(null); // the finished run, awaiting a name
+  const [saved, setSaved] = useState<Entry | null>(null); // the entry just added to the board
+  const [nameInput, setNameInput] = useState('');
 
   const persist = useCallback((patch: Partial<SaveData>) => {
     saveRef.current = { ...saveRef.current, ...patch };
@@ -55,20 +72,25 @@ export default function Homeward() {
     setFurthest(save.furthestAct);
     setDeaths(save.deaths);
     setMuted(save.muted);
+    setBoard(loadBoard());
 
     const game = new Game(canvas, {
       onDeath: (d) => {
         setDeaths(d);
         persist({ deaths: d });
       },
-      onActComplete: (a, d) => {
+      onActComplete: (a, d, seconds) => {
         setDeaths(d);
         if (a >= ACTS.length) {
-          persist({ deaths: d });
+          // The journey is over: offer the run to the leaderboard (if it counts), and close it so replaying
+          // the last act from Continue cannot be submitted a second time.
+          setPending(finishedRun({ ...saveRef.current, deaths: d }, '', seconds, new Date()));
+          setSaved(null);
+          persist({ deaths: d, runValid: false });
           setScreen('ending');
         } else {
           const next = Math.max(saveRef.current.furthestAct, a + 1);
-          persist({ deaths: d, furthestAct: next });
+          persist({ deaths: d, furthestAct: next, ...afterActCompleted(saveRef.current, seconds) });
           setFurthest(next);
           setAct(a + 1);
           setScreen('narration');
@@ -105,6 +127,7 @@ export default function Homeward() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return; // typing a name
       if (!e.repeat && (e.code === 'Escape' || e.code === 'KeyP')) togglePause();
     };
     window.addEventListener('keydown', onKey);
@@ -112,7 +135,7 @@ export default function Homeward() {
   }, [togglePause]);
 
   const newJourney = () => {
-    persist({ furthestAct: 1, deaths: 0 });
+    persist(startRun());
     setFurthest(1);
     setDeaths(0);
     setAct(1);
@@ -126,6 +149,9 @@ export default function Homeward() {
   };
 
   const jumpToAct = (n: number) => {
+    const patch = skipAhead(n);
+    persist(patch);
+    if (patch.deaths !== undefined) setDeaths(patch.deaths);
     setAct(n);
     setScreen('narration');
   };
@@ -149,6 +175,16 @@ export default function Homeward() {
     persist({ muted: next });
   };
 
+  const submitScore = (e: FormEvent) => {
+    e.preventDefault();
+    if (!pending || saved) return;
+    const entry: Entry = { ...pending, name: cleanName(nameInput) };
+    const next = addEntry(board, entry);
+    setBoard(next);
+    saveBoard(next);
+    setSaved(entry);
+  };
+
   const current = ACTS[act - 1];
 
   return (
@@ -168,7 +204,7 @@ export default function Homeward() {
             <button className="btn" onClick={newJourney} autoFocus={furthest === 1}>
               New Journey
             </button>
-            <p className="hint">Arrows / WASD to move · Space to jump · X to act · Esc to pause</p>
+            <p className="hint">Arrows / WASD to move · Space to jump · X to act · P or Esc to pause</p>
             <div className="acts">
               <p className="hint">Or begin at any act:</p>
               <div className="acts-row">
@@ -179,6 +215,9 @@ export default function Homeward() {
                 ))}
               </div>
             </div>
+            <button className="chip" onClick={() => setScreen('leaderboard')}>
+              Leaderboard
+            </button>
           </div>
         )}
 
@@ -204,11 +243,12 @@ export default function Homeward() {
           <div className="overlay">
             <h2 className="heading">Paused</h2>
             <button className="btn" onClick={togglePause} autoFocus>
-              Resume
+              Resume (P)
             </button>
-            <button className="chip" onClick={() => setScreen('title')}>
-              Main menu (choose an act)
+            <button className="btn btn-alt" onClick={() => setScreen('title')}>
+              Main menu
             </button>
+            <p className="hint">The main menu lets you choose any act. Your progress is saved.</p>
           </div>
         )}
 
@@ -221,18 +261,92 @@ export default function Homeward() {
               </p>
             ))}
             <p className="kicker">
+              {pending ? `Time ${formatTime(pending.seconds)} · ` : ''}
               {deaths === 0 ? 'You never fell.' : `The sea took you ${deaths} time${deaths === 1 ? '' : 's'} on the way.`}
             </p>
-            <button className="btn" onClick={newJourney} autoFocus>
-              Sail again
+            {pending && !saved && (
+              <form className="score-form" onSubmit={submitScore}>
+                <label className="hint" htmlFor="name">
+                  Your name for the leaderboard
+                </label>
+                <input
+                  id="name"
+                  className="name-input"
+                  value={nameInput}
+                  maxLength={12}
+                  placeholder="Odysseus"
+                  onChange={(e) => setNameInput(e.target.value)}
+                  autoFocus
+                />
+                <button className="btn" type="submit">
+                  Save my run
+                </button>
+              </form>
+            )}
+            {saved && (
+              <p className="hint">
+                Saved! #{rankOf(board, saved, 'time')} fastest · #{rankOf(board, saved, 'deaths')} fewest deaths
+              </p>
+            )}
+            {!pending && !saved && (
+              <p className="hint">Practice run: you skipped ahead, so it is not on the leaderboard. Start a New Journey to set a time.</p>
+            )}
+            <div className="row">
+              <button className="chip" onClick={() => setScreen('leaderboard')}>
+                Leaderboard
+              </button>
+              <button className="btn" onClick={newJourney} autoFocus={!pending || !!saved}>
+                Sail again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {screen === 'leaderboard' && (
+          <div className="overlay">
+            <h2 className="heading">Leaderboard</h2>
+            <div className="row">
+              <button className="chip" aria-pressed={boardView === 'time'} onClick={() => setBoardView('time')}>
+                Fastest
+              </button>
+              <button className="chip" aria-pressed={boardView === 'deaths'} onClick={() => setBoardView('deaths')}>
+                Fewest deaths
+              </button>
+            </div>
+            {board.length === 0 ? (
+              <p className="hint">No runs yet. Finish the game from a New Journey to set a time.</p>
+            ) : (
+              <table className="board">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Time</th>
+                    <th>Deaths</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ranked(board, boardView).map((e, i) => (
+                    <tr key={`${e.date}-${i}`} className={e === saved ? 'mine' : undefined}>
+                      <td>{i + 1}</td>
+                      <td>{e.name}</td>
+                      <td>{formatTime(e.seconds)}</td>
+                      <td>{e.deaths}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            <button className="btn" onClick={() => setScreen('title')} autoFocus>
+              Back
             </button>
           </div>
         )}
 
         <div className="toolbar">
           {screen === 'playing' && (
-            <button className="chip" onClick={togglePause}>
-              Pause
+            <button className="chip" onClick={togglePause} title="Pause (P or Esc)">
+              Pause (P)
             </button>
           )}
           <button className="chip" onClick={toggleMute}>
