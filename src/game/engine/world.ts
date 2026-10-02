@@ -12,6 +12,8 @@ export interface World {
 
 export interface WorldHooks {
   waterY?: () => number;
+  /** Extra solid cells that come and go (crumbling platforms). Added to the tile solids. */
+  solidOverride?: (col: number, row: number) => boolean;
 }
 
 export function makeWorld(level: Level, hooks: WorldHooks = {}): World {
@@ -19,7 +21,7 @@ export function makeWorld(level: Level, hooks: WorldHooks = {}): World {
     level,
     cols: level.cols,
     rows: level.rows,
-    solid: (c, r) => tileAt(level, c, r) === '#',
+    solid: (c, r) => tileAt(level, c, r) === '#' || (hooks.solidOverride?.(c, r) ?? false),
     deadly: (c, r) => {
       const ch = tileAt(level, c, r);
       return ch === '^' || ch === '~';

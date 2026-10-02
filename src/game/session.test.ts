@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ACTS } from './acts';
 import { layoutAct1 } from './acts/act1';
+import { layoutAct4 } from './acts/act4';
 import { gapTop } from './acts/sea';
 import { Session, type SessionEvent } from './session';
 import { NO_INPUT, type InputState } from './types';
@@ -340,8 +341,33 @@ describe('Session (Act 4)', () => {
   it('auto-scrolls the camera to the right', () => {
     const s = new Session(4);
     const x0 = s.camera.x;
-    run(s, 50); // under a second: before the whirlpool catches the idle player and resets the scroll
-    expect(s.camera.x).toBeGreaterThan(x0 + 25);
+    run(s, 80); // the screen holds still for the 1.5 s start grace...
+    expect(s.camera.x - x0).toBeLessThan(1);
+    run(s, 25); // ...then it begins to scroll (before the whirlpool catches the idle player)
+    expect(s.camera.x).toBeGreaterThan(x0 + 10);
+  });
+});
+
+describe('Act 4 additions', () => {
+  it('has crumbling platforms and spikes, and keeps checkpoint platforms solid and clear', () => {
+    const layout = layoutAct4();
+    expect(layout.crumbles.length).toBeGreaterThanOrEqual(5);
+    expect(layout.rows.some((r) => r.includes('^'))).toBe(true);
+    for (const c of layout.crumbles) expect(layout.rows[c.row - 1][c.col + 1]).not.toBe('C');
+  });
+
+  it('a cracked platform gives way under a player who stands on it, and holds again later', () => {
+    const s = new Session(4);
+    const spec = layoutAct4().crumbles[0];
+    const inst = s.inst as unknown as { crumbles: { state: string }[]; camX: number };
+    const platform = inst.crumbles[0];
+    inst.camX = spec.col * 16 - 100; // bring the screen to the platform (the right edge is a wall)
+    s.player.x = spec.col * 16 + 20;
+    s.player.y = spec.row * 16 - 14;
+    for (let i = 0; i < 20; i++) s.update(DT, NO_INPUT); // settle onto it, held still by the start grace
+    expect(platform.state).not.toBe('solid');
+    for (let i = 0; i < 20; i++) s.update(DT, NO_INPUT);
+    expect(platform.state).toBe('fallen');
   });
 });
 
