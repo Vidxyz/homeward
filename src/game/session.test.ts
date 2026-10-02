@@ -388,15 +388,92 @@ describe('Act 4 additions', () => {
   });
 });
 
-describe('Session (Act 5)', () => {
-  it('has no hazards, walks slowly, and completes at the goal', () => {
+interface IthacaInternals {
+  suitors: { x: number; dir: 1 | -1; timer: number; jeer: number; nextJeer: number }[];
+  bow: { stage: string; aim(): number; tension: number } | null;
+}
+const ithaca = (s: Session) => s.inst as unknown as IthacaInternals;
+
+describe('Session (Act 5, Ithaca)', () => {
+  it('the road is safe and unhurried', () => {
     const s = new Session(5);
     run(s, 300, right);
     expect(s.deaths).toBe(0);
     expect(s.player.speedScale).toBeCloseTo(0.7);
-    s.player.x = s.level.goal.x;
-    s.player.y = s.level.goal.y;
-    expect(run(s, 2)).toContainEqual({ type: 'complete', act: 5, deaths: 0 });
+  });
+
+  it('a beggar who runs about in front of the suitors is seen through', () => {
+    const s = new Session(5);
+    const suitor = ithaca(s).suitors[0];
+    s.player.x = suitor.x - 52;
+    s.player.y = 9 * 16 - 14;
+    let died = false;
+    for (let i = 0; i < 240 && !died; i++) {
+      suitor.dir = -1; // looking straight at him
+      suitor.timer = 1e9;
+      suitor.nextJeer = 1e9;
+      s.update(DT, { ...NO_INPUT, right: i % 40 < 20, left: i % 40 >= 20 });
+      died = s.deaths > 0;
+    }
+    expect(died).toBe(true);
+  });
+
+  it('the same beggar, shuffling hunched (ACTION held), is not', () => {
+    const s = new Session(5);
+    const suitor = ithaca(s).suitors[0];
+    s.player.x = suitor.x - 52;
+    s.player.y = 9 * 16 - 14;
+    for (let i = 0; i < 240; i++) {
+      suitor.dir = -1;
+      suitor.timer = 1e9;
+      suitor.nextJeer = 1e9;
+      s.update(DT, { ...NO_INPUT, action: true, right: i % 40 < 20, left: i % 40 >= 20 });
+    }
+    expect(s.deaths).toBe(0);
+  });
+
+  it('suitors who look away do not mind a beggar who walks tall', () => {
+    const s = new Session(5);
+    const suitor = ithaca(s).suitors[0];
+    s.player.x = suitor.x - 52;
+    s.player.y = 9 * 16 - 14;
+    for (let i = 0; i < 120; i++) {
+      suitor.dir = 1; // looking the other way
+      suitor.timer = 1e9;
+      suitor.nextJeer = 1e9;
+      s.update(DT, { ...NO_INPUT, left: i % 40 >= 20, right: i % 40 < 20 });
+    }
+    expect(s.deaths).toBe(0);
+  });
+
+  it('reaching the bow freezes the player and starts the trial', () => {
+    const s = new Session(5);
+    s.player.x = 108 * 16;
+    s.player.y = 9 * 16 - 14;
+    run(s, 3);
+    expect(ithaca(s).bow).not.toBeNull();
+    const x = s.player.x;
+    run(s, 30, right);
+    expect(Math.abs(s.player.x - x)).toBeLessThan(2); // the controls now belong to the bow
+  });
+
+  it('stringing the bow and shooting through the axes completes the act', () => {
+    const s = new Session(5);
+    s.player.x = 108 * 16;
+    s.player.y = 9 * 16 - 14;
+    run(s, 3);
+    const events: SessionEvent[] = [];
+    // Draw: hold ACTION until the tension is in the green zone, then let go.
+    for (let i = 0; i < 200 && ithaca(s).bow!.tension < 0.8; i++) {
+      events.push(...s.update(DT, { ...NO_INPUT, action: true }));
+    }
+    events.push(...s.update(DT, NO_INPUT));
+    expect(ithaca(s).bow!.stage).toBe('aim');
+    // Aim: loose when the marker crosses the rings.
+    for (let i = 0; i < 60 * 20 && Math.abs(ithaca(s).bow!.aim()) > 0.03; i++) events.push(...s.update(DT, NO_INPUT));
+    events.push(...s.update(DT, { ...NO_INPUT, jump: true, jumpPressed: true }));
+    for (let i = 0; i < 60 * 5 && !s.finished; i++) events.push(...s.update(DT, NO_INPUT));
+    expect(events).toContainEqual({ type: 'complete', act: 5, deaths: 0 });
   });
 });
 

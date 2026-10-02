@@ -14,6 +14,10 @@ export interface ActFrame {
   /** Set by auto-scrolling acts to drive the camera. */
   cameraX?: number;
   sfx?: SfxName[];
+  /** Ignore the player's movement input this tick (a minigame has taken over the controls). */
+  freeze?: boolean;
+  /** The act has been won by some means other than reaching the goal. */
+  complete?: boolean;
 }
 
 export interface ActInstance {

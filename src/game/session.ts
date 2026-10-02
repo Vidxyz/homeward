@@ -4,7 +4,7 @@ import { Camera } from './engine/camera';
 import { CheckpointTracker } from './engine/checkpoints';
 import { bodyAt, stepBody, type Body } from './engine/physics';
 import type { Level } from './level';
-import { overlaps, type InputState, type SfxName, type Vec } from './types';
+import { NO_INPUT, overlaps, type InputState, type SfxName, type Vec } from './types';
 
 export type SessionEvent =
   | { type: 'sfx'; name: SfxName }
@@ -63,7 +63,7 @@ export class Session {
     if (this.inst.drive) {
       died = this.inst.drive(dt, this.player, input).died;
     } else {
-      const res = stepBody(this.player, input, this.inst.world, dt, frame.push);
+      const res = stepBody(this.player, frame.freeze ? NO_INPUT : input, this.inst.world, dt, frame.push);
       died = res.died;
       if (res.jumped) events.push({ type: 'sfx', name: 'jump' });
       if (res.landed) events.push({ type: 'sfx', name: 'land' });
@@ -82,7 +82,7 @@ export class Session {
 
     if (this.tracker.update(this.player)) events.push({ type: 'sfx', name: 'checkpoint' });
 
-    if (overlaps(this.player, this.level.goal)) {
+    if (frame.complete || overlaps(this.player, this.level.goal)) {
       this.finished = true;
       events.push(
         { type: 'sfx', name: 'win' },

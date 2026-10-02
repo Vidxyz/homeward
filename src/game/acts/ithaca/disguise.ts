@@ -30,3 +30,30 @@ export class Suspicion {
     this.value = 0;
   }
 }
+
+export const STOOP_DRAIN = 8; // seconds of stooping from full
+export const STOOP_RECOVER = 4; // seconds to refill from empty while standing
+
+/** An old man's back: stooping tires it, and an exhausted one has to stand up straight for a while. */
+export class Stamina {
+  value = 1;
+  exhausted = false;
+
+  /** Pass whether the player wants to stoop; returns whether they actually are. */
+  update(dt: number, wantsStoop: boolean): boolean {
+    const stooping = wantsStoop && !this.exhausted && this.value > 0;
+    if (stooping) {
+      this.value = Math.max(0, this.value - dt / STOOP_DRAIN);
+      if (this.value <= 0) this.exhausted = true;
+    } else {
+      this.value = Math.min(1, this.value + dt / STOOP_RECOVER);
+      if (this.exhausted && this.value >= 0.35) this.exhausted = false;
+    }
+    return stooping;
+  }
+
+  reset(): void {
+    this.value = 1;
+    this.exhausted = false;
+  }
+}

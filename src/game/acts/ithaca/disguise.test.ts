@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HUNCH_SCALE, HALL_SCALE, Suspicion, WALK_SPEED_LIMIT, looksSuspicious } from './disguise';
+import { HUNCH_SCALE, HALL_SCALE, STOOP_DRAIN, Stamina, Suspicion, WALK_SPEED_LIMIT, looksSuspicious } from './disguise';
 
 describe('looksSuspicious', () => {
   it('a hunched beggar is never suspicious, however he moves', () => {
@@ -47,5 +47,50 @@ describe('Suspicion', () => {
     s.reset();
     expect(s.value).toBe(0);
     expect(s.blown).toBe(false);
+  });
+});
+
+describe('Stamina (how long an old man can stay stooped)', () => {
+  it('lets you stoop at first, and reports whether you are actually stooping', () => {
+    const s = new Stamina();
+    expect(s.update(1 / 60, true)).toBe(true);
+    expect(s.update(1 / 60, false)).toBe(false);
+  });
+
+  it('drains while stooped, and runs out after about its drain time', () => {
+    const s = new Stamina();
+    let stoopedFor = 0;
+    while (s.update(1 / 60, true) && stoopedFor < 20) stoopedFor += 1 / 60; // the first unbroken stoop
+    expect(stoopedFor).toBeGreaterThan(STOOP_DRAIN - 0.2);
+    expect(stoopedFor).toBeLessThan(STOOP_DRAIN + 0.5);
+    expect(s.exhausted).toBe(true);
+  });
+
+  it('once exhausted you cannot stoop until you have recovered a little', () => {
+    const s = new Stamina();
+    for (let i = 0; i < 60 * 20 && !s.exhausted; i++) s.update(1 / 60, true);
+    expect(s.exhausted).toBe(true);
+    expect(s.update(1 / 60, true)).toBe(false); // still too tired
+    for (let i = 0; i < 60 * 2; i++) s.update(1 / 60, false); // stand and rest
+    expect(s.exhausted).toBe(false);
+    expect(s.update(1 / 60, true)).toBe(true);
+  });
+
+  it('refills while standing, but more slowly than it drained', () => {
+    const s = new Stamina();
+    for (let i = 0; i < 60 * 3; i++) s.update(1 / 60, true); // half gone
+    const low = s.value;
+    for (let i = 0; i < 60 * 1; i++) s.update(1 / 60, false);
+    expect(s.value).toBeGreaterThan(low);
+    expect(s.value - low).toBeLessThan(0.5); // refilling at a quarter of full per second
+    expect(s.value).toBeLessThan(1);
+  });
+
+  it('reset refills it', () => {
+    const s = new Stamina();
+    for (let i = 0; i < 60 * 8; i++) s.update(1 / 60, true);
+    s.reset();
+    expect(s.value).toBe(1);
+    expect(s.exhausted).toBe(false);
   });
 });
