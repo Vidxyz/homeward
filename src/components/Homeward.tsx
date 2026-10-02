@@ -18,10 +18,11 @@ import {
 } from '@/game/leaderboard';
 import { afterActCompleted, afterGameFinished, finishedRun, skipAhead, startRun } from '@/game/run';
 import { DEFAULT_SAVE, loadSave, writeSave, type SaveData } from '@/game/save';
+import { ACT_TIPS, CONTROLS, GENERAL_TIPS } from '@/game/help';
 import { ENDING_LINES, ROMAN } from '@/game/story';
 import type { Key } from '@/game/types';
 
-type Screen = 'title' | 'narration' | 'playing' | 'paused' | 'ending' | 'leaderboard';
+type Screen = 'title' | 'narration' | 'playing' | 'paused' | 'ending' | 'leaderboard' | 'help';
 
 function TouchButton({ k, label, getInput }: { k: Key; label: string; getInput: () => Input | null }) {
   const press = (down: boolean) => (e: ReactPointerEvent) => {
@@ -50,6 +51,7 @@ export default function Homeward() {
   const [screen, setScreen] = useState<Screen>('title');
   const screenRef = useRef(screen);
   screenRef.current = screen;
+  const helpFromRef = useRef<'title' | 'paused'>('title');
   const [act, setAct] = useState(1);
   const [deaths, setDeaths] = useState(0);
   const [furthest, setFurthest] = useState(1);
@@ -57,6 +59,7 @@ export default function Homeward() {
   const [board, setBoard] = useState<Entry[]>([]);
   const [boardView, setBoardView] = useState<SortKey>('time');
   const [fullOnly, setFullOnly] = useState(true);
+  const [helpFrom, setHelpFrom] = useState<'title' | 'paused'>('title'); // where How to Play returns to
   const [pending, setPending] = useState<Entry | null>(null); // the finished run, awaiting a name
   const [saved, setSaved] = useState<Entry | null>(null); // the entry just added to the board
   const [nameInput, setNameInput] = useState('');
@@ -130,11 +133,19 @@ export default function Homeward() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return; // typing a name
-      if (!e.repeat && (e.code === 'Escape' || e.code === 'KeyP')) togglePause();
+      if (e.repeat || (e.code !== 'Escape' && e.code !== 'KeyP')) return;
+      if (screenRef.current === 'help') setScreen(helpFromRef.current); // P or Esc closes the help
+      else togglePause();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [togglePause]);
+
+  const openHelp = (from: 'title' | 'paused') => {
+    helpFromRef.current = from;
+    setHelpFrom(from);
+    setScreen('help');
+  };
 
   const newJourney = () => {
     persist(startRun());
@@ -217,9 +228,14 @@ export default function Homeward() {
                 ))}
               </div>
             </div>
-            <button className="chip" onClick={() => setScreen('leaderboard')}>
-              Leaderboard
-            </button>
+            <div className="row">
+              <button className="chip" onClick={() => openHelp('title')}>
+                How to play
+              </button>
+              <button className="chip" onClick={() => setScreen('leaderboard')}>
+                Leaderboard
+              </button>
+            </div>
           </div>
         )}
 
@@ -249,6 +265,9 @@ export default function Homeward() {
             </button>
             <button className="btn btn-alt" onClick={() => setScreen('title')}>
               Main menu
+            </button>
+            <button className="chip" onClick={() => openHelp('paused')}>
+              How to play
             </button>
             <p className="hint">The main menu lets you choose any act. Your progress is saved.</p>
           </div>
@@ -302,6 +321,55 @@ export default function Homeward() {
                 Sail again
               </button>
             </div>
+          </div>
+        )}
+
+        {screen === 'help' && (
+          <div className="overlay help">
+            <h2 className="heading">How to play</h2>
+            <button className="chip" onClick={() => setScreen(helpFrom)}>
+              {helpFrom === 'paused' ? 'Back to the game (P)' : 'Back (P)'}
+            </button>
+            <div className="help-body">
+              <ul className="help-list">
+                {GENERAL_TIPS.map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ul>
+              <table className="board help-controls">
+                <thead>
+                  <tr>
+                    <th>Control</th>
+                    <th>Keyboard</th>
+                    <th>Touch</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {CONTROLS.map((c) => (
+                    <tr key={c.action}>
+                      <td>{c.action}</td>
+                      <td>{c.keys}</td>
+                      <td>{c.touch}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {ACT_TIPS.map((a) => (
+                <section key={a.id}>
+                  <h3 className="help-act">
+                    Act {ROMAN[a.id - 1]} · {a.name}
+                  </h3>
+                  <ul className="help-list">
+                    {a.tips.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+            <button className="btn" onClick={() => setScreen(helpFrom)}>
+              {helpFrom === 'paused' ? 'Back to the game' : 'Back'}
+            </button>
           </div>
         )}
 
