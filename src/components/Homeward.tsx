@@ -10,9 +10,6 @@ import type { Key } from '@/game/types';
 
 type Screen = 'title' | 'narration' | 'playing' | 'paused' | 'ending';
 
-/** Set NEXT_PUBLIC_DEBUG=1 (or `pnpm dev:debug`) to get a jump-to-act panel on the title screen. */
-const DEBUG_ENABLED = ['1', 'true'].includes(process.env.NEXT_PUBLIC_DEBUG ?? '');
-
 function TouchButton({ k, label, getInput }: { k: Key; label: string; getInput: () => Input | null }) {
   const press = (down: boolean) => (e: ReactPointerEvent) => {
     e.preventDefault();
@@ -44,7 +41,6 @@ export default function Homeward() {
   const [deaths, setDeaths] = useState(0);
   const [furthest, setFurthest] = useState(1);
   const [muted, setMuted] = useState(false);
-  const [debugOn, setDebugOn] = useState(false);
 
   const persist = useCallback((patch: Partial<SaveData>) => {
     saveRef.current = { ...saveRef.current, ...patch };
@@ -169,22 +165,16 @@ export default function Homeward() {
               New Journey
             </button>
             <p className="hint">Arrows / WASD to move · Space to jump · X to act · Esc to pause</p>
-            {DEBUG_ENABLED && (
-              <div className="debug">
-                <button className="chip" onClick={() => setDebugOn((v) => !v)} aria-pressed={debugOn}>
-                  Debug mode: {debugOn ? 'on' : 'off'}
-                </button>
-                {debugOn && (
-                  <div className="debug-acts">
-                    {ACTS.map((a) => (
-                      <button key={a.id} className="chip" onClick={() => jumpToAct(a.id)}>
-                        {ROMAN[a.id - 1]} · {a.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            <div className="acts">
+              <p className="hint">Or begin at any act:</p>
+              <div className="acts-row">
+                {ACTS.map((a) => (
+                  <button key={a.id} className="chip" onClick={() => jumpToAct(a.id)} title={a.name}>
+                    {ROMAN[a.id - 1]} · {a.name}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -208,6 +198,9 @@ export default function Homeward() {
             <h2 className="heading">Paused</h2>
             <button className="btn" onClick={togglePause} autoFocus>
               Resume
+            </button>
+            <button className="chip" onClick={() => setScreen('title')}>
+              Main menu (choose an act)
             </button>
           </div>
         )}

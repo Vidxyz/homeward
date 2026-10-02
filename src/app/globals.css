@@ -91,21 +91,20 @@ body {
   outline: none;
 }
 
-.debug {
+.acts {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1cqw;
   margin-top: 1cqw;
-  padding: 1cqw 2cqw;
-  border: 1px dashed rgba(255, 209, 102, 0.5);
 }
 
-.debug-acts {
+.acts-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 1cqw;
+  max-width: 84cqw;
 }
 
 .toolbar {

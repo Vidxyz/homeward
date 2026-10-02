@@ -9,7 +9,7 @@ pnpm install
 pnpm dev        # http://localhost:3000
 ```
 
-Debug mode: `pnpm dev:debug` (sets `NEXT_PUBLIC_DEBUG=1`) adds a toggle on the title screen with buttons to jump straight to any act.
+Every act is unlocked from the start: pick one on the title screen, or open the pause menu and choose Main menu.
 
 Controls: arrows or WASD to move, Space/Up/Z to jump, X/S/Shift for the action button, Esc or P to pause. On touch devices, on-screen buttons appear.
 
