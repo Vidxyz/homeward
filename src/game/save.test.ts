@@ -26,8 +26,9 @@ describe('save', () => {
 
   it('round-trips data', () => {
     const s = memoryStorage();
-    writeSave({ furthestAct: 3, deaths: 12, muted: true, runSeconds: 321.5, runValid: true }, s);
-    expect(loadSave(s)).toEqual({ furthestAct: 3, deaths: 12, muted: true, runSeconds: 321.5, runValid: true });
+    const data = { furthestAct: 3, deaths: 12, muted: true, runSeconds: 321.5, runValid: true, touchMode: 'on' as const, touchSwap: true };
+    writeSave(data, s);
+    expect(loadSave(s)).toEqual(data);
   });
 
   it('falls back to defaults on corrupt JSON', () => {
@@ -36,7 +37,7 @@ describe('save', () => {
 
   it('clamps out-of-range values', () => {
     const s = memoryStorage(JSON.stringify({ furthestAct: 99, deaths: -5, muted: 'yes' }));
-    expect(loadSave(s)).toEqual({ furthestAct: 5, deaths: 0, muted: false, runSeconds: 0, runValid: false });
+    expect(loadSave(s)).toEqual({ furthestAct: 5, deaths: 0, muted: false, runSeconds: 0, runValid: false, touchMode: 'auto', touchSwap: false });
   });
 
   it('treats a save from before runs were timed as a practice journey', () => {
@@ -59,5 +60,24 @@ describe('save', () => {
   it('never throws when there is no storage at all', () => {
     expect(loadSave(null)).toEqual(DEFAULT_SAVE);
     expect(() => writeSave(DEFAULT_SAVE, null)).not.toThrow();
+  });
+});
+
+describe('touch settings', () => {
+  it('default to automatic buttons in the standard layout', () => {
+    expect(DEFAULT_SAVE.touchMode).toBe('auto');
+    expect(DEFAULT_SAVE.touchSwap).toBe(false);
+  });
+
+  it('an older save without them gets the defaults', () => {
+    const loaded = loadSave(memoryStorage(JSON.stringify({ furthestAct: 2, deaths: 1, muted: false })));
+    expect(loaded.touchMode).toBe('auto');
+    expect(loaded.touchSwap).toBe(false);
+  });
+
+  it('ignores nonsense values', () => {
+    const loaded = loadSave(memoryStorage(JSON.stringify({ touchMode: 'sideways', touchSwap: 'yes' })));
+    expect(loaded.touchMode).toBe('auto');
+    expect(loaded.touchSwap).toBe(false);
   });
 });

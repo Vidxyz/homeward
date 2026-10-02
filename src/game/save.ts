@@ -1,3 +1,5 @@
+import type { TouchMode } from './touch';
+
 export interface SaveData {
   furthestAct: number;
   /** Lives lost so far on this journey. */
@@ -7,9 +9,21 @@ export interface SaveData {
   runSeconds: number;
   /** False once the player has skipped ahead with the act picker: such a run is practice, not for the board. */
   runValid: boolean;
+  /** On-screen touch buttons: shown automatically on touch devices, or forced on or off. */
+  touchMode: TouchMode;
+  /** Put movement on the right and the Jump/Action buttons on the left (the reverse of the phone-standard layout). */
+  touchSwap: boolean;
 }
 
-export const DEFAULT_SAVE: SaveData = { furthestAct: 1, deaths: 0, muted: false, runSeconds: 0, runValid: true };
+export const DEFAULT_SAVE: SaveData = {
+  furthestAct: 1,
+  deaths: 0,
+  muted: false,
+  runSeconds: 0,
+  runValid: true,
+  touchMode: 'auto',
+  touchSwap: false,
+};
 export const SAVE_KEY = 'homeward.save.v1';
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
@@ -40,6 +54,8 @@ export function loadSave(storage: StorageLike | null = defaultStorage()): SaveDa
       runSeconds: typeof p.runSeconds === 'number' && p.runSeconds >= 0 ? Math.min(p.runSeconds, 1e7) : 0,
       // A save from before runs were timed has no honest time on it: treat that journey as practice.
       runValid: p.runValid === true,
+      touchMode: p.touchMode === 'on' || p.touchMode === 'off' ? p.touchMode : 'auto',
+      touchSwap: p.touchSwap === true,
     };
   } catch {
     return { ...DEFAULT_SAVE };

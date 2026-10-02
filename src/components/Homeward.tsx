@@ -1,8 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { ACTS } from '@/game/acts';
-import type { Input } from '@/game/engine/input';
 import { Game } from '@/game/game';
 import {
   addEntry,
@@ -20,28 +19,20 @@ import { afterActCompleted, afterGameFinished, finishedRun, skipAhead, startRun 
 import { DEFAULT_SAVE, loadSave, writeSave, type SaveData } from '@/game/save';
 import { ACT_TIPS, CONTROLS, GENERAL_TIPS } from '@/game/help';
 import { ENDING_LINES, ROMAN } from '@/game/story';
-import type { Key } from '@/game/types';
+import { nextTouchMode, touchVisible, type TouchMode } from '@/game/touch';
+import { TouchControls } from './TouchControls';
 
-type Screen = 'title' | 'narration' | 'playing' | 'paused' | 'ending' | 'leaderboard' | 'help';
+type Screen = 'title' | 'narration' | 'playing' | 'paused' | 'ending' | 'leaderboard' | 'help' | 'settings';
 
-function TouchButton({ k, label, getInput }: { k: Key; label: string; getInput: () => Input | null }) {
-  const press = (down: boolean) => (e: ReactPointerEvent) => {
-    e.preventDefault();
-    getInput()?.set(k, down);
-  };
-  return (
-    <button
-      className={`touch touch-${k}`}
-      aria-label={label}
-      onPointerDown={press(true)}
-      onPointerUp={press(false)}
-      onPointerCancel={press(false)}
-      onPointerLeave={press(false)}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {label}
-    </button>
-  );
+const TOUCH_MODE_LABEL: Record<TouchMode, string> = { auto: 'Auto (touch screens only)', on: 'Always shown', off: 'Hidden' };
+
+/** A short buzz on phones that support it (Android browsers; ignored elsewhere). */
+function buzz(pattern: number | number[]): void {
+  try {
+    navigator.vibrate?.(pattern);
+  } catch {
+    /* not supported */
+  }
 }
 
 export default function Homeward() {
@@ -51,7 +42,7 @@ export default function Homeward() {
   const [screen, setScreen] = useState<Screen>('title');
   const screenRef = useRef(screen);
   screenRef.current = screen;
-  const helpFromRef = useRef<'title' | 'paused'>('title');
+  const returnToRef = useRef<'title' | 'paused'>('title');
   const [act, setAct] = useState(1);
   const [deaths, setDeaths] = useState(0);
   const [furthest, setFurthest] = useState(1);
@@ -59,7 +50,12 @@ export default function Homeward() {
   const [board, setBoard] = useState<Entry[]>([]);
   const [boardView, setBoardView] = useState<SortKey>('time');
   const [fullOnly, setFullOnly] = useState(true);
-  const [helpFrom, setHelpFrom] = useState<'title' | 'paused'>('title'); // where How to Play returns to
+  const [returnTo, setReturnTo] = useState<'title' | 'paused'>('title'); // where How to Play and Settings return to
+  const [touchMode, setTouchMode] = useState<TouchMode>('auto');
+  const [touchSwap, setTouchSwap] = useState(false);
+  const [coarse, setCoarse] = useState(false); // is the main pointer a finger?
+  const [fullscreenOk, setFullscreenOk] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [pending, setPending] = useState<Entry | null>(null); // the finished run, awaiting a name
   const [saved, setSaved] = useState<Entry | null>(null); // the entry just added to the board
   const [nameInput, setNameInput] = useState('');
@@ -77,14 +73,18 @@ export default function Homeward() {
     setFurthest(save.furthestAct);
     setDeaths(save.deaths);
     setMuted(save.muted);
+    setTouchMode(save.touchMode);
+    setTouchSwap(save.touchSwap);
     setBoard(loadBoard());
 
     const game = new Game(canvas, {
       onDeath: (d) => {
+        buzz(40);
         setDeaths(d);
         persist({ deaths: d });
       },
       onActComplete: (a, d, seconds) => {
+        buzz([30, 40, 70]);
         setDeaths(d);
         if (a >= ACTS.length) {
           // The journey is over: always offer the run to the leaderboard (marked partial if it skipped ahead),
@@ -134,17 +134,69 @@ export default function Homeward() {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return; // typing a name
       if (e.repeat || (e.code !== 'Escape' && e.code !== 'KeyP')) return;
-      if (screenRef.current === 'help') setScreen(helpFromRef.current); // P or Esc closes the help
+      const s = screenRef.current;
+      if (s === 'help' || s === 'settings') setScreen(returnToRef.current); // P or Esc closes these
       else togglePause();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [togglePause]);
 
-  const openHelp = (from: 'title' | 'paused') => {
-    helpFromRef.current = from;
-    setHelpFrom(from);
-    setScreen('help');
+  const openSub = (screen: 'help' | 'settings', from: 'title' | 'paused') => {
+    returnToRef.current = from;
+    setReturnTo(from);
+    setScreen(screen);
+  };
+
+  // Is the main pointer a finger? Decides whether the on-screen buttons show in Auto mode.
+  useEffect(() => {
+    const mq = window.matchMedia('(pointer: coarse)');
+    const update = () => setCoarse(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  // Fullscreen (where the browser offers it; not iPhone Safari).
+  useEffect(() => {
+    setFullscreenOk(document.fullscreenEnabled === true);
+    const onChange = () => setIsFullscreen(document.fullscreenElement !== null);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  // Switching apps or tabs mid-game pauses it, instead of leaving Odysseus to the sea.
+  useEffect(() => {
+    const onHide = () => {
+      if (document.hidden && screenRef.current === 'playing') togglePause();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    return () => document.removeEventListener('visibilitychange', onHide);
+  }, [togglePause]);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+        // Best effort: landscape is the better shape for this game (Android; ignored where unsupported).
+        await (window.screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape').catch(() => {});
+      }
+    } catch {
+      /* the browser refused: nothing to do */
+    }
+  };
+
+  const cycleTouchMode = () => {
+    const next = nextTouchMode(touchMode);
+    setTouchMode(next);
+    persist({ touchMode: next });
+  };
+
+  const toggleSwap = () => {
+    setTouchSwap(!touchSwap);
+    persist({ touchSwap: !touchSwap });
   };
 
   const newJourney = () => {
@@ -198,10 +250,11 @@ export default function Homeward() {
     setSaved(entry);
   };
 
+  const showTouch = screen === 'playing' && touchVisible(touchMode, coarse);
   const current = ACTS[act - 1];
 
   return (
-    <main className="shell">
+    <main className={`shell${showTouch ? ' has-touch' : ''}`}>
       <div className="stage">
         <canvas ref={canvasRef} className="canvas" aria-label="Homeward game" />
 
@@ -229,11 +282,14 @@ export default function Homeward() {
               </div>
             </div>
             <div className="row">
-              <button className="chip" onClick={() => openHelp('title')}>
+              <button className="chip" onClick={() => openSub('help', 'title')}>
                 How to play
               </button>
               <button className="chip" onClick={() => setScreen('leaderboard')}>
                 Leaderboard
+              </button>
+              <button className="chip" onClick={() => openSub('settings', 'title')}>
+                Settings
               </button>
             </div>
           </div>
@@ -266,9 +322,14 @@ export default function Homeward() {
             <button className="btn btn-alt" onClick={() => setScreen('title')}>
               Main menu
             </button>
-            <button className="chip" onClick={() => openHelp('paused')}>
-              How to play
-            </button>
+            <div className="row">
+              <button className="chip" onClick={() => openSub('help', 'paused')}>
+                How to play
+              </button>
+              <button className="chip" onClick={() => openSub('settings', 'paused')}>
+                Settings
+              </button>
+            </div>
             <p className="hint">The main menu lets you choose any act. Your progress is saved.</p>
           </div>
         )}
@@ -327,8 +388,8 @@ export default function Homeward() {
         {screen === 'help' && (
           <div className="overlay help">
             <h2 className="heading">How to play</h2>
-            <button className="chip" onClick={() => setScreen(helpFrom)}>
-              {helpFrom === 'paused' ? 'Back to the game (P)' : 'Back (P)'}
+            <button className="chip" onClick={() => setScreen(returnTo)}>
+              {returnTo === 'paused' ? 'Back to the game (P)' : 'Back (P)'}
             </button>
             <div className="help-body">
               <ul className="help-list">
@@ -367,8 +428,49 @@ export default function Homeward() {
                 </section>
               ))}
             </div>
-            <button className="btn" onClick={() => setScreen(helpFrom)}>
-              {helpFrom === 'paused' ? 'Back to the game' : 'Back'}
+            <button className="btn" onClick={() => setScreen(returnTo)}>
+              {returnTo === 'paused' ? 'Back to the game' : 'Back'}
+            </button>
+          </div>
+        )}
+
+        {screen === 'settings' && (
+          <div className="overlay">
+            <h2 className="heading">Settings</h2>
+            <div className="settings">
+              <div className="setting">
+                <span>Sound</span>
+                <button className="chip" onClick={toggleMute}>
+                  {muted ? 'Off' : 'On'}
+                </button>
+              </div>
+              <div className="setting">
+                <span>Touch buttons</span>
+                <button className="chip" onClick={cycleTouchMode}>
+                  {TOUCH_MODE_LABEL[touchMode]}
+                </button>
+              </div>
+              <div className="setting">
+                <span>Touch layout</span>
+                <button className="chip" onClick={toggleSwap}>
+                  {touchSwap ? 'Movement on the right' : 'Movement on the left'}
+                </button>
+              </div>
+              {fullscreenOk && (
+                <div className="setting">
+                  <span>Fullscreen</span>
+                  <button className="chip" onClick={toggleFullscreen}>
+                    {isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                  </button>
+                </div>
+              )}
+            </div>
+            <p className="hint">
+              Movement on the left matches most phone games. Choose the right if you would rather have your right thumb on the arrows, like the
+              arrow keys on a keyboard. Landscape gives the biggest view.
+            </p>
+            <button className="btn" onClick={() => setScreen(returnTo)} autoFocus>
+              {returnTo === 'paused' ? 'Back to the game' : 'Back'}
             </button>
           </div>
         )}
@@ -433,19 +535,9 @@ export default function Homeward() {
           </button>
         </div>
 
-        {screen === 'playing' && (
-          <div className="touch-controls">
-            <div className="touch-left">
-              <TouchButton k="left" label="◀" getInput={() => gameRef.current?.input ?? null} />
-              <TouchButton k="right" label="▶" getInput={() => gameRef.current?.input ?? null} />
-            </div>
-            <div className="touch-right">
-              <TouchButton k="action" label="B" getInput={() => gameRef.current?.input ?? null} />
-              <TouchButton k="jump" label="A" getInput={() => gameRef.current?.input ?? null} />
-            </div>
-          </div>
-        )}
       </div>
+
+      {showTouch && <TouchControls getInput={() => gameRef.current?.input ?? null} swapped={touchSwap} />}
     </main>
   );
 }
