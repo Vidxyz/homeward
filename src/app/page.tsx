@@ -1,3 +1,5 @@
+import Homeward from '@/components/Homeward';
+
 export default function Page() {
-  return <main style={{ padding: 24 }}>Homeward</main>;
+  return <Homeward />;
 }

@@ -5,4 +5,140 @@ body {
   background: #05080c;
   color: #f2ecdc;
   font-family: 'Courier New', ui-monospace, monospace;
+  overscroll-behavior: none;
+}
+
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stage {
+  position: relative;
+  width: min(100vw, calc(100dvh * 5 / 3));
+  aspect-ratio: 320 / 192;
+  container-type: inline-size;
+  background: #000;
+  overflow: hidden;
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2cqw;
+  padding: 4cqw;
+  box-sizing: border-box;
+  text-align: center;
+  background: rgba(5, 8, 12, 0.72);
+  font-size: clamp(10px, 2.4cqw, 22px);
+}
+
+.title {
+  margin: 0;
+  font-size: 9cqw;
+  letter-spacing: 0.4cqw;
+  color: #ffd166;
+}
+
+.subtitle,
+.hint,
+.kicker {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.kicker {
+  color: #ffd166;
+  letter-spacing: 0.3cqw;
+}
+
+.heading {
+  margin: 0;
+  font-size: 5cqw;
+}
+
+.line {
+  margin: 0;
+  max-width: 70cqw;
+  line-height: 1.5;
+}
+
+.btn {
+  font: inherit;
+  color: #05080c;
+  background: #ffd166;
+  border: 0;
+  padding: 1.2cqw 3cqw;
+  cursor: pointer;
+}
+
+.btn:hover,
+.btn:focus-visible {
+  background: #fff3b0;
+  outline: none;
+}
+
+.toolbar {
+  position: absolute;
+  top: 1cqw;
+  right: 1cqw;
+  display: flex;
+  gap: 1cqw;
+}
+
+.chip {
+  font: inherit;
+  font-size: clamp(9px, 1.8cqw, 16px);
+  color: #f2ecdc;
+  background: rgba(5, 8, 12, 0.55);
+  border: 1px solid rgba(242, 236, 220, 0.35);
+  padding: 0.5cqw 1.2cqw;
+  cursor: pointer;
+}
+
+.touch-controls {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .touch-controls {
+    display: flex;
+    position: absolute;
+    inset: auto 0 2cqw 0;
+    justify-content: space-between;
+    padding: 0 3cqw;
+    pointer-events: none;
+  }
+  .touch-left,
+  .touch-right {
+    display: flex;
+    gap: 2cqw;
+  }
+  .touch {
+    pointer-events: auto;
+    width: 11cqw;
+    height: 11cqw;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    font: inherit;
+    font-size: 4cqw;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
 }
