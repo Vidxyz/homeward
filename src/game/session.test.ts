@@ -57,3 +57,29 @@ describe('Session (Act 1)', () => {
     expect(() => new Session(99)).toThrow(/act/i);
   });
 });
+
+describe('Session (Act 2)', () => {
+  it('loads, lets the player idle behind the Cyclops, and stays finite', () => {
+    const s = new Session(2);
+    run(s, 600);
+    expect(s.deaths).toBe(0);
+    expect(Number.isFinite(s.player.x)).toBe(true);
+  });
+
+  it('kills a player standing in the open in front of him', () => {
+    const s = new Session(2);
+    run(s, 100); // let the post-spawn grace period (1.5 s) expire; he is now near col 33, facing right
+    s.player.x = 43 * 16; // inside his 150 px sight range, in the open (the nearest shadow zone is cols 38-40)
+    s.player.y = 10 * 16 - 14;
+    run(s, 120); // 0.7 s of exposure fills the meter
+    expect(s.deaths).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not kill a player hiding in a shadow with ACTION held', () => {
+    const s = new Session(2);
+    s.player.x = 38 * 16 + 20; // inside the shadow zone at col 38-40
+    s.player.y = 10 * 16 - 14;
+    run(s, 400, { ...NO_INPUT, action: true });
+    expect(s.deaths).toBe(0);
+  });
+});
