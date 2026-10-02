@@ -4,7 +4,7 @@ A five-act pixel-art platformer: Odysseus, lost at sea, fighting his way home. S
 
 This README is for **developers** (setup, architecture, tests, deployment, maintenance). For how the game plays, what each act does, and the design decisions and constraints behind it, read **[gameplay.md](./gameplay.md)**.
 
-**Status:** feature complete and **live at https://homeward-amber.vercel.app** (Vercel project `homeward`, team `vdhysgr-5964's projects`). Source: `github.com/Vidxyz/homeward`. See [Deployment](#deployment).
+**Status:** feature complete and **live at https://gohomeward.vercel.app** (Vercel project `homeward`, team `vdhysgr-5964's projects`). Source: `github.com/Vidxyz/homeward`. See [Deployment](#deployment).
 
 ---
 
@@ -245,7 +245,8 @@ The app is a standard Next.js project with no server code, no environment variab
 
 ### Current setup
 
-- **Live URL:** https://homeward-amber.vercel.app (the production alias; the per-deployment URLs sit behind Vercel's login protection, which is normal).
+- **Live URL:** https://gohomeward.vercel.app. The older address https://homeward-amber.vercel.app (assigned automatically because `homeward.vercel.app` was taken) still works. The per-deployment URLs (`homeward-<hash>-...vercel.app`) sit behind Vercel's login protection, which is normal.
+- **Adding a domain:** use `vercel domains add <name>.vercel.app` (run in this folder). Do **not** use `vercel alias set` for this: an alias created that way is not a project domain, so Vercel's deployment protection puts it behind a login page. (`gohomeward.vercel.app` was first aliased that way, showed a Vercel login, and was fixed by adding it as a project domain.) New project domains attach to the latest production deployment.
 - **Vercel project:** `homeward`, under the `vdhysgr-5964's projects` team (the same team as `playing-cards`). It was created with `vercel link --yes --project homeward` and deployed with `vercel --prod`. The local link lives in `.vercel/` (git-ignored, machine-local).
 - **To redeploy from this machine:** `vercel --prod` (log in first with `vercel login` if the token has expired).
 - **Auto-deploy on push is NOT connected yet.** The Vercel account has no GitHub login connection, so `vercel link` could not attach the repository. To enable it: add a GitHub connection in Vercel account settings (Authentication), then run `vercel git connect` in this folder (or connect the repo under the project's Settings > Git). After that, every push to `main` deploys to production and other branches get previews.
