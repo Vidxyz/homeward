@@ -16,7 +16,7 @@ Controls: arrows or WASD to move, Space/Up/Z to jump, X/S/Shift for the action b
 ## The five acts
 
 1. **The Storm**: sail a ship through the sliding gaps in reef walls, dodging lightning and reading the gusts. Up/Down steer with the jump/action keys.
-2. **The Cyclops' Cave**: stealth against an erratic giant, with noisy sheep in the way. Stand fully inside a shadow to hide (no button).
+2. **The Cyclops' Cave**: two parts. Sneak to his den past an erratic giant, a sheepdog, sleeping giants, falling stalactites and flaring braziers (shadows hide you only if you are still or creeping; hold ACTION to creep), then take the stake to blind him and escape while he hunts by sound. Running, jumping and landing are loud; the stampeding flock masks the noise.
 3. **The Sirens**: resist the song's pull by pressing ACTION on the beat.
 4. **Scylla and Charybdis**: an auto-scrolling chase.
 5. **Ithaca**: the walk home.

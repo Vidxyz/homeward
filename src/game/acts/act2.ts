@@ -264,17 +264,17 @@ class CaveAct implements ActInstance {
     r.text(this.noiseLabel.toUpperCase(), 9, 27, colour, 1, 'left', 0.95);
 
     const hint = this.hint();
-    if (hint) r.text(hint.text, VIEW_W / 2, 30, '#ffffff', 1, 'center', Math.min(1, hint.fade));
+    if (hint) r.text(hint.text, VIEW_W / 2, 176, '#ffffff', 1, 'center', Math.min(1, hint.fade));
   }
 
   private hint(): { text: string; fade: number } | null {
     const s = this.phaseTime;
     if (this.phase === 2) {
-      return s < 8 ? { text: 'He is blind and hunts by sound. Creep! Stay with the flock.', fade: 8 - s } : null;
+      return s < 8 ? { text: 'He hunts by sound. Creep. Stay near the sheep.', fade: 8 - s } : null;
     }
-    if (s < 6) return { text: 'Hold ACTION to creep. Shadows hide you only if you are still.', fade: 6 - s };
-    if (s < 12) return { text: 'Dogs, sheep and falling rocks are loud. He hears them.', fade: 12 - s };
-    if (s < 18) return { text: 'Creep to his den and take the stake.', fade: 18 - s };
+    if (s < 6) return { text: 'Hold ACTION to creep. Shadows need you still.', fade: 6 - s };
+    if (s < 12) return { text: 'Dogs, sheep and falling rock are loud.', fade: 12 - s };
+    if (s < 18) return { text: 'Creep to his den. Take the stake.', fade: 18 - s };
     return null;
   }
 }
