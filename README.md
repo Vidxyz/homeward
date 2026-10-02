@@ -4,7 +4,7 @@ A five-act pixel-art platformer: Odysseus, lost at sea, fighting his way home. S
 
 This README is for **developers** (setup, architecture, tests, deployment, maintenance). For how the game plays, what each act does, and the design decisions and constraints behind it, read **[gameplay.md](./gameplay.md)**.
 
-**Status:** feature complete and playable locally. **Not deployed yet** (see [Deployment](#deployment)). Nothing has been pushed to a remote.
+**Status:** feature complete and **live at https://homeward-amber.vercel.app** (Vercel project `homeward`, team `vdhysgr-5964's projects`). Source: `github.com/Vidxyz/homeward`. See [Deployment](#deployment).
 
 ---
 
@@ -241,14 +241,20 @@ Add its name to `SfxName` in `types.ts`, a `case` in `AudioEngine.sfx` (`engine/
 
 ## Deployment
 
-The app is a standard Next.js project with no server code, no environment variables, no database and no `vercel.json`. Vercel detects everything. **It has not been deployed yet.**
+The app is a standard Next.js project with no server code, no environment variables, no database and no `vercel.json`. Vercel detects everything.
+
+### Current setup
+
+- **Live URL:** https://homeward-amber.vercel.app (the production alias; the per-deployment URLs sit behind Vercel's login protection, which is normal).
+- **Vercel project:** `homeward`, under the `vdhysgr-5964's projects` team (the same team as `playing-cards`). It was created with `vercel link --yes --project homeward` and deployed with `vercel --prod`. The local link lives in `.vercel/` (git-ignored, machine-local).
+- **To redeploy from this machine:** `vercel --prod` (log in first with `vercel login` if the token has expired).
+- **Auto-deploy on push is NOT connected yet.** The Vercel account has no GitHub login connection, so `vercel link` could not attach the repository. To enable it: add a GitHub connection in Vercel account settings (Authentication), then run `vercel git connect` in this folder (or connect the repo under the project's Settings > Git). After that, every push to `main` deploys to production and other branches get previews.
 
 ### Option A: Git integration (recommended)
 
-1. Push the repository to GitHub (the project is a local git repo on `main` with no remote yet):
+1. Push the repository to GitHub (the remote is `origin` = `git@github.com:Vidxyz/homeward.git`):
    ```bash
-   git remote add origin <your-repo-url>
-   git push -u origin main
+   git push origin main
    ```
 2. In Vercel: **Add New... > Project**, import the repo.
 3. Leave the defaults. Framework preset: **Next.js**. Install command: auto-detected (pnpm, from `pnpm-lock.yaml`). Build command: `next build`. Output: automatic. Node.js version: 20.x or newer.
