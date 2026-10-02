@@ -101,12 +101,21 @@ describe('Session (Act 2)', () => {
     expect(s.deaths).toBeGreaterThanOrEqual(1);
   });
 
-  it('does not kill a player hiding in a shadow with ACTION held', () => {
+  it('does not kill a player standing fully inside a shadow, with no button held', () => {
     const s = new Session(2);
-    s.player.x = 38 * 16 + 20; // inside the shadow zone at col 38-40
+    s.player.x = 38 * 16 + 20; // inside the shadow zone at cols 38-40
     s.player.y = 10 * 16 - 14;
-    run(s, 400, { ...NO_INPUT, action: true });
+    run(s, 400);
     expect(s.deaths).toBe(0);
+  });
+
+  it('still kills a player who is only half in a shadow', () => {
+    const s = new Session(2);
+    run(s, 100); // let the post-spawn grace expire; he is near col 33, facing right
+    s.player.x = 40 * 16 + 10; // right edge (x+10) crosses out of the zone (cols 38-40) into the light
+    s.player.y = 10 * 16 - 14;
+    run(s, 120);
+    expect(s.deaths).toBeGreaterThanOrEqual(1);
   });
 });
 

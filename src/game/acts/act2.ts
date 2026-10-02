@@ -1,5 +1,5 @@
 import { LevelBuilder } from '../levelBuilder';
-import { parseLevel, tileAt, type Level } from '../level';
+import { parseLevel, type Level } from '../level';
 import { TRACKS } from '../music';
 import { PALETTES } from '../palettes';
 import type { Body } from '../engine/physics';
@@ -8,7 +8,7 @@ import { makeWorld } from '../engine/world';
 import { TILE, VIEW_W, type InputState, type SfxName, type Vec } from '../types';
 import { mulberry32 } from './pathGen';
 import { resolveSheep } from './sheep';
-import { canSee } from './stealth';
+import { canSee, isFullyInShadow } from './stealth';
 import type { ActFrame, ActInstance, ActModule } from './types';
 
 const palette = PALETTES[1];
@@ -81,6 +81,8 @@ class CaveAct implements ActInstance {
   private stepTimer = 0;
   private alert = 0;
   private grace = GRACE;
+  private hidden = false;
+  private playerPos: Vec = { x: 0, y: 0 };
 
   private readonly sheep: Sheep[];
 
@@ -96,12 +98,6 @@ class CaveAct implements ActInstance {
       cooldown: 0,
       bleatFor: 0,
     }));
-  }
-
-  private isHidden(player: Body, input: InputState): boolean {
-    const col = Math.floor((player.x + player.w / 2) / TILE);
-    const row = Math.floor((player.y + player.h / 2) / TILE);
-    return input.action && tileAt(this.level, col, row) === 'H';
   }
 
   /** A loud noise at world x: if it carries far enough, the Cyclops goes to see what it was. */
@@ -216,18 +212,19 @@ class CaveAct implements ActInstance {
     }
   }
 
-  update(dt: number, player: Body, input: InputState): ActFrame {
+  update(dt: number, player: Body, _input: InputState): ActFrame {
     this.t += dt;
     this.grace = Math.max(0, this.grace - dt);
     const sfx: SfxName[] = [];
 
     this.updateCyclops(dt, sfx);
     this.updateSheep(dt, player, sfx);
+    this.playerPos = { x: player.x, y: player.y };
 
     const eye = { x: this.x, y: FLOOR_Y - 84 };
     const target = { x: player.x + player.w / 2, y: player.y + player.h / 2 };
-    const seen =
-      this.grace <= 0 && canSee(this.world, eye, this.dir, target, RANGE, this.isHidden(player, input));
+    this.hidden = isFullyInShadow(this.level, player);
+    const seen = this.grace <= 0 && canSee(this.world, eye, this.dir, target, RANGE, this.hidden);
     this.alert = seen ? Math.min(1, this.alert + dt / SEEN_AFTER) : Math.max(0, this.alert - dt / 1.2);
 
     return { push: 0, kill: this.alert >= 1, sfx };
@@ -288,13 +285,14 @@ class CaveAct implements ActInstance {
     if (this.mood === 'investigate') {
       r.worldText('!', this.x, FLOOR_Y - 106, palette.accent, 2, 'center');
     }
+    if (this.hidden) r.worldText('HIDDEN', this.playerPos.x + 5, this.playerPos.y - 6, '#9fe3a8', 1, 'center', 0.9);
 
     r.screenRect(8, 8, 60, 7, '#000000', 0.5);
     r.screenRect(9, 9, 58 * this.alert, 5, '#e63946');
     r.text('SEEN', 74, 15, '#ffffff', 1, 'left', 0.9);
 
     if (this.t < 7) {
-      r.text('Hold ACTION (X) in the shadows to hide', VIEW_W / 2, 30, '#ffffff', 1, 'center', Math.min(1, 7 - this.t));
+      r.text('Stand fully inside a shadow to hide', VIEW_W / 2, 30, '#ffffff', 1, 'center', Math.min(1, 7 - this.t));
     } else if (this.t < 14) {
       r.text('Sheep bleat when bumped. He hears it.', VIEW_W / 2, 30, '#ffffff', 1, 'center', Math.min(1, 14 - this.t));
     }
@@ -307,7 +305,7 @@ export const act2: ActModule = {
   name: "The Cyclops' Cave",
   intro: [
     'A cave. A mountain of a man. One great eye.',
-    'He paces without pattern, and his flock is loud. Stay in the shadows. Be nobody.',
+    'He paces without pattern, and his flock is loud. Slip into the shadows. Be nobody.',
   ],
   palette,
   music: TRACKS[1],

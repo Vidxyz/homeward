@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { makeWorld } from '../engine/world';
 import { parseLevel } from '../level';
-import { canSee, lineOfSight } from './stealth';
+import { canSee, isFullyInShadow, lineOfSight } from './stealth';
 
 function worldOf(rows: string[]) {
   return makeWorld(parseLevel(rows));
@@ -48,5 +48,24 @@ describe('canSee', () => {
 
   it('does not see through walls', () => {
     expect(canSee(walled, eye, 1, { x: 200, y: 24 }, 300, false)).toBe(false);
+  });
+});
+
+describe('isFullyInShadow', () => {
+  // Row 0: shadow tiles at columns 2-4 (x 32..80).
+  const level = parseLevel(['S.HHH..G', '########']);
+
+  it('is true when the whole body is inside shadow tiles', () => {
+    expect(isFullyInShadow(level, { x: 40, y: 2, w: 10, h: 14 })).toBe(true);
+    expect(isFullyInShadow(level, { x: 32, y: 2, w: 10, h: 14 })).toBe(true);
+  });
+
+  it('is false when any part of the body sticks out of the shadow', () => {
+    expect(isFullyInShadow(level, { x: 28, y: 2, w: 10, h: 14 })).toBe(false); // left edge in light
+    expect(isFullyInShadow(level, { x: 74, y: 2, w: 10, h: 14 })).toBe(false); // right edge in light
+  });
+
+  it('is false in plain light', () => {
+    expect(isFullyInShadow(level, { x: 100, y: 2, w: 10, h: 14 })).toBe(false);
   });
 });
