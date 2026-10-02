@@ -106,3 +106,31 @@ describe('Session (Act 3)', () => {
     expect(x0 - protectedRun.player.x).toBeLessThan(x0 - unprotected.player.x);
   });
 });
+
+describe('Session (Act 4)', () => {
+  it('the whirlpool catches an idle player and they respawn behind the scroll', () => {
+    const s = new Session(4);
+    run(s, 600);
+    expect(s.deaths).toBeGreaterThanOrEqual(1);
+    expect(Number.isFinite(s.player.x)).toBe(true);
+  });
+
+  it('auto-scrolls the camera to the right', () => {
+    const s = new Session(4);
+    const x0 = s.camera.x;
+    run(s, 50); // under a second: before the whirlpool catches the idle player and resets the scroll
+    expect(s.camera.x).toBeGreaterThan(x0 + 25);
+  });
+});
+
+describe('Session (Act 5)', () => {
+  it('has no hazards, walks slowly, and completes at the goal', () => {
+    const s = new Session(5);
+    run(s, 300, right);
+    expect(s.deaths).toBe(0);
+    expect(s.player.speedScale).toBeCloseTo(0.7);
+    s.player.x = s.level.goal.x;
+    s.player.y = s.level.goal.y;
+    expect(run(s, 2)).toContainEqual({ type: 'complete', act: 5, deaths: 0 });
+  });
+});
