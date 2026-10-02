@@ -48,8 +48,8 @@ Each unit has one purpose and is testable alone.
 
 Each act is a level file plus a small module implementing its twist.
 
-1. **The Storm** — Tutorial. Leap between wave-tossed wreckage; a periodic tide moves platforms. Teaches run, jump and timing.
-2. **The Cyclops' Cave** — Stealth. Polyphemus has a line of sight and audible footsteps; the player uses shadows and hiding spots.
+1. **The Storm** — Sailing (revised after first playtest). The player steers a ship in four directions across a storm-tossed sea, threading gaps in rows of reef and avoiding telegraphed lightning; the swell shoves the ship about. Up/Down use the jump/action keys. Reaching the shore ends the act.
+2. **The Cyclops' Cave** — Stealth (revised after first playtest). Polyphemus paces erratically (walks, reverses, stops to look around) and has a line of sight; the player uses shadows. A flock of sheep wanders the floor as solid obstacles; bumping one makes it bleat, and the Cyclops hears and investigates.
 3. **The Sirens** — Resistance. A pull force drags the player toward the song; resisting means timing movement to a rhythm cue.
 4. **Scylla and Charybdis** — Chase. Auto-scrolling strait with a whirlpool pulling backward on one side and strikes from the other.
 5. **Ithaca** — Return. No hazards, a slow walk home, a short ending, and the death counter revealed.
@@ -58,7 +58,8 @@ Each act is a level file plus a small module implementing its twist.
 
 - Sprites are character grids defined in code, with a limited palette per act: grey-teal storm, firelit cave, blue-gold sirens, dark red strait, dawn Ithaca.
 - Parallax sea layers, a changing sky gradient, and simple particles (spray, embers).
-- Sound is synthesized: jump, land, death, checkpoint, ambient loop per act. Mute toggle persists.
+- Sound is synthesized: jump, land, death, checkpoint, bleat, thunder, ambient loop per act. Mute toggle persists.
+- On-canvas text uses a built-in 5x7 pixel font drawn at whole-number scales (crisp when upscaled), not a browser font.
 
 ## Flow and persistence
 

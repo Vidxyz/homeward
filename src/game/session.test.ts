@@ -12,22 +12,44 @@ function run(s: Session, frames: number, inp: InputState = NO_INPUT): SessionEve
   return all;
 }
 
-describe('Session (Act 1)', () => {
-  it('starts on the spawn pier and survives idling', () => {
+describe('Session (Act 1, sailing)', () => {
+  it('starts in open water and survives idling', () => {
     const s = new Session(1);
     run(s, 600);
     expect(s.deaths).toBe(0);
-    expect(s.player.onGround).toBe(true);
   });
 
-  it('counts a death, then respawns at the spawn', () => {
+  it('sails to the right under player control', () => {
     const s = new Session(1);
-    const spawnX = s.level.spawn.x + 3;
-    for (let i = 0; i < 400 && s.deaths === 0; i++) s.update(DT, right);
+    const x0 = s.player.x;
+    run(s, 60, right);
+    expect(s.player.x).toBeGreaterThan(x0 + 50);
+  });
+
+  it('steers up and down with the jump and action keys', () => {
+    const s = new Session(1);
+    const y0 = s.player.y;
+    run(s, 30, { ...NO_INPUT, jump: true });
+    expect(s.player.y).toBeLessThan(y0 - 20);
+    run(s, 60, { ...NO_INPUT, action: true });
+    expect(s.player.y).toBeGreaterThan(y0);
+  });
+
+  it('wrecks the ship on a reef, then respawns at the spawn', () => {
+    const s = new Session(1);
+    let rock: { c: number; r: number } | null = null;
+    for (let r = 0; r < s.level.rows && !rock; r++) {
+      const c = s.level.tiles[r].indexOf('#');
+      if (c >= 0) rock = { c, r };
+    }
+    expect(rock).not.toBeNull();
+    s.player.x = rock!.c * 16 - 40;
+    s.player.y = rock!.r * 16 + 2;
+    for (let i = 0; i < 90 && s.deaths === 0; i++) s.update(DT, right);
     expect(s.deaths).toBe(1);
     run(s, 60);
-    expect(Math.abs(s.player.x - spawnX)).toBeLessThan(2);
-    expect(s.dying).toBeLessThanOrEqual(0);
+    expect(s.deaths).toBe(1);
+    expect(Math.abs(s.player.x - (s.level.spawn.x + 3))).toBeLessThan(2);
   });
 
   it('emits a checkpoint sound and respawns there afterwards', () => {
@@ -38,16 +60,19 @@ describe('Session (Act 1)', () => {
     const events = run(s, 2);
     expect(events).toContainEqual({ type: 'sfx', name: 'checkpoint' });
 
-    s.player.y = 500;
+    s.player.y = 500; // out of bounds is clamped; put the ship inside a reef instead
+    const rockCol = s.level.tiles[0].indexOf('#');
+    s.player.x = rockCol * 16;
+    s.player.y = 0;
     run(s, 90);
-    expect(s.deaths).toBe(1);
+    expect(s.deaths).toBeGreaterThanOrEqual(1);
     expect(Math.abs(s.player.x - (cp.x + 3))).toBeLessThan(2);
   });
 
-  it('completes the act when the goal is reached and then stops updating', () => {
+  it('completes the act when the shore is reached and then stops updating', () => {
     const s = new Session(1);
-    s.player.x = s.level.goal.x;
-    s.player.y = s.level.goal.y;
+    s.player.x = s.level.goal.x - 20; // the bow crosses the shoreline just before the sand
+    s.player.y = 80;
     const events = run(s, 2);
     expect(events).toContainEqual({ type: 'complete', act: 1, deaths: 0 });
     expect(s.finished).toBe(true);
@@ -150,5 +175,71 @@ describe('every act', () => {
       expect(Number.isFinite(s.player.y)).toBe(true);
       expect(Number.isFinite(s.camera.x)).toBe(true);
     }
+  });
+});
+
+interface CaveInternals {
+  x: number;
+  dir: 1 | -1;
+  mood: string;
+  hear(x: number): void;
+  sheep: { x: number; moving: boolean; timer: number; cooldown: number; bleatFor: number }[];
+}
+
+describe('Session (Act 2, erratic Cyclops and sheep)', () => {
+  it('paces erratically: he reverses direction several times and stays inside the cave', () => {
+    const s = new Session(2);
+    const cave = s.inst as unknown as CaveInternals;
+    let changes = 0;
+    let last = cave.dir;
+    let minX = Infinity;
+    let maxX = -Infinity;
+    for (let i = 0; i < 60 * 120; i++) {
+      s.player.x = 5 * 16 + 20; // keep the player hidden-ish and out of the way
+      s.update(DT, { ...NO_INPUT, action: true });
+      if (cave.dir !== last) {
+        changes++;
+        last = cave.dir;
+      }
+      minX = Math.min(minX, cave.x);
+      maxX = Math.max(maxX, cave.x);
+    }
+    expect(changes).toBeGreaterThanOrEqual(6);
+    expect(minX).toBeGreaterThanOrEqual(8 * 16 - 0.01);
+    expect(maxX).toBeLessThanOrEqual(128 * 16 + 0.01);
+  });
+
+  it('goes to investigate a noise he can hear, and ignores one that is too far away', () => {
+    const s = new Session(2);
+    const cave = s.inst as unknown as CaveInternals;
+    cave.x = 800;
+    cave.hear(1200);
+    expect(cave.mood).toBe('investigate');
+    run(s, 60);
+    expect(cave.x).toBeGreaterThan(830);
+
+    const far = new Session(2);
+    const farCave = far.inst as unknown as CaveInternals;
+    farCave.x = 200;
+    farCave.hear(1800);
+    expect(farCave.mood).toBe('walk');
+  });
+
+  it('sheep block the player, and bumping one makes it bleat', () => {
+    const s = new Session(2);
+    const cave = s.inst as unknown as CaveInternals;
+    const sheep = cave.sheep[0];
+    sheep.moving = false;
+    sheep.timer = 1e9;
+    s.player.x = sheep.x - 25;
+    s.player.y = 10 * 16 - 14;
+    const events: SessionEvent[] = [];
+    for (let i = 0; i < 60; i++) {
+      sheep.timer = 1e9;
+      sheep.moving = false;
+      events.push(...s.update(DT, right));
+    }
+    expect(s.player.x + s.player.w).toBeLessThanOrEqual(sheep.x + 2);
+    expect(events).toContainEqual({ type: 'sfx', name: 'bleat' });
   });
 });

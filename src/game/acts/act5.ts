@@ -66,7 +66,7 @@ class IthacaAct implements ActInstance {
 
   drawFront(r: Parameters<ActInstance['drawFront']>[0]): void {
     if (this.t < 8) {
-      r.text('Walk home.', VIEW_W / 2, 30, '#ffffff', 8, 'center', Math.min(1, 8 - this.t));
+      r.text('Walk home.', VIEW_W / 2, 30, '#ffffff', 1, 'center', Math.min(1, 8 - this.t));
     }
   }
 }

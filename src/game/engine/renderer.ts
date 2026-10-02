@@ -1,6 +1,7 @@
 import { tileAt, type Level } from '../level';
 import type { Palette } from '../palettes';
 import { SPRITE_COLORS } from '../sprites';
+import { GLYPH_H, GLYPH_W, glyph, textWidth } from './font';
 import { TILE, VIEW_H, VIEW_W } from '../types';
 
 export class Renderer {
@@ -47,23 +48,55 @@ export class Renderer {
     c.globalAlpha = 1;
   }
 
+  /** Crisp pixel-font text in screen space. `y` is the baseline; `scale` is a whole number. */
   text(
     str: string,
     x: number,
     y: number,
     color: string,
-    size = 8,
-    align: CanvasTextAlign = 'left',
+    scale = 1,
+    align: 'left' | 'center' | 'right' = 'left',
     alpha = 1,
   ): void {
     if (!this.textVisible) return;
+    const s = str.toUpperCase();
+    const w = textWidth(s, scale);
+    const x0 = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+    const top = y - GLYPH_H * scale;
+    this.drawGlyphs(s, x0 + scale, top + scale, '#000000', alpha * 0.6, scale);
+    this.drawGlyphs(s, x0, top, color, alpha, scale);
+  }
+
+  /** Like `text`, but positioned in world space. */
+  worldText(
+    str: string,
+    x: number,
+    y: number,
+    color: string,
+    scale = 1,
+    align: 'left' | 'center' | 'right' = 'left',
+    alpha = 1,
+  ): void {
+    this.text(str, x + this.ox, y + this.oy, color, scale, align, alpha);
+  }
+
+  private drawGlyphs(s: string, x: number, y: number, color: string, alpha: number, scale: number): void {
     const c = this.ctx;
     c.globalAlpha = alpha;
     c.fillStyle = color;
-    c.font = `bold ${size}px "Courier New", monospace`;
-    c.textAlign = align;
-    c.textBaseline = 'alphabetic';
-    c.fillText(str, Math.round(x), Math.round(y));
+    let cx = Math.round(x);
+    const cy = Math.round(y);
+    for (const ch of s) {
+      const g = glyph(ch);
+      if (g) {
+        for (let j = 0; j < g.length; j++) {
+          for (let i = 0; i < GLYPH_W; i++) {
+            if (g[j][i] === '#') c.fillRect(cx + i * scale, cy + j * scale, scale, scale);
+          }
+        }
+      }
+      cx += (GLYPH_W + 1) * scale;
+    }
     c.globalAlpha = 1;
   }
 

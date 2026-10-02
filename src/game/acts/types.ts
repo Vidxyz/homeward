@@ -19,6 +19,10 @@ export interface ActFrame {
 export interface ActInstance {
   readonly world: World;
   update(dt: number, player: Body, input: InputState): ActFrame;
+  /** Acts that don't use platformer physics (sailing) move the player themselves. */
+  drive?(dt: number, player: Body, input: InputState): { died: boolean };
+  /** Lets an act draw its own player (a ship). Return true if it did. */
+  drawPlayer?(r: Renderer, player: Body, alpha: number, time: number): boolean;
   /** Called on (re)spawn. Returns a camera X for auto-scrolling acts. */
   reset(respawn: Vec): number | undefined;
   drawBack(r: Renderer, camX: number, camY: number): void;

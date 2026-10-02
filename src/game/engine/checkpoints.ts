@@ -16,7 +16,7 @@ export class CheckpointTracker {
     let fresh = false;
     this.checkpoints.forEach((c, i) => {
       if (this.reached.has(i)) return;
-      const zone: Rect = { x: c.x - TILE / 2, y: c.y - TILE, w: TILE * 2, h: TILE * 2 };
+      const zone: Rect = { x: c.x - TILE / 2, y: c.y - TILE, w: TILE * 2, h: TILE * 3 };
       if (overlaps(player, zone)) {
         this.reached.add(i);
         this.current = { ...c };

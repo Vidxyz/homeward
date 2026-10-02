@@ -108,7 +108,7 @@ class SirensAct implements ActInstance {
       r.circle(cx, cy, 8 + (untilBeat / PERIOD) * 34, '#ffffff', false, 0.85);
     }
     if (this.t < 10) {
-      r.text('Press ACTION (X) as the ring closes', VIEW_W / 2, 30, '#ffffff', 7, 'center', Math.min(1, 10 - this.t));
+      r.text('Press ACTION (X) as the ring closes', VIEW_W / 2, 30, '#ffffff', 1, 'center', Math.min(1, 10 - this.t));
     }
   }
 }

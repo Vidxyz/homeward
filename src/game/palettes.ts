@@ -16,8 +16,8 @@ export interface Palette {
 export const PALETTES: Palette[] = [
   // 1 The Storm: grey-teal
   {
-    skyTop: '#16222b', skyBottom: '#4a6572', far: '#26414d', mid: '#1f3540',
-    solid: '#6b4a2f', solidTop: '#8a6a45', solidDark: '#4a331f',
+    skyTop: '#0d2530', skyBottom: '#1f5566', far: '#17414f', mid: '#1b4c5c',
+    solid: '#4b5560', solidTop: '#6e7c8a', solidDark: '#2d343b',
     water: '#2d6a7a', foam: '#cfe8ee', hazard: '#b8b8b8', accent: '#ffd166', shadow: '#000000',
   },
   // 2 The Cyclops' Cave: firelit

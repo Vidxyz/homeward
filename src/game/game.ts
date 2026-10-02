@@ -150,6 +150,7 @@ export class Game {
       return;
     }
     const b = s.player;
+    if (s.inst.drawPlayer?.(r, b, alpha, s.time)) return;
     const x = lerp(b.px, b.x, alpha) - 1;
     const y = lerp(b.py, b.y, alpha) - 2;
     let frame = ODYSSEUS.idle;
@@ -160,11 +161,11 @@ export class Game {
 
   private drawHud(r: Renderer, s: Session): void {
     const p = s.act.palette;
-    r.text(`DEATHS ${s.deaths}`, 6, VIEW_H - 6, '#ffffff', 7, 'left', 0.7);
+    r.text(`DEATHS ${s.deaths}`, 6, VIEW_H - 6, '#ffffff', 1, 'left', 0.9);
     if (s.time > 0 && s.time < 3.5) {
       const a = Math.min(1, 3.5 - s.time);
-      r.text(`ACT ${ROMAN[s.act.id - 1]}`, VIEW_W / 2, 50, p.accent, 10, 'center', a);
-      r.text(s.act.name.toUpperCase(), VIEW_W / 2, 64, '#ffffff', 8, 'center', a);
+      r.text(`ACT ${ROMAN[s.act.id - 1]}`, VIEW_W / 2, 52, p.accent, 2, 'center', a);
+      r.text(s.act.name, VIEW_W / 2, 66, '#ffffff', 1, 'center', a);
     }
   }
 }

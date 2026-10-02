@@ -59,14 +59,20 @@ export class Session {
     const frame = this.inst.update(dt, this.player, input);
     frame.sfx?.forEach((name) => events.push({ type: 'sfx', name }));
 
-    const res = stepBody(this.player, input, this.inst.world, dt, frame.push);
-    if (res.jumped) events.push({ type: 'sfx', name: 'jump' });
-    if (res.landed) events.push({ type: 'sfx', name: 'land' });
+    let died: boolean;
+    if (this.inst.drive) {
+      died = this.inst.drive(dt, this.player, input).died;
+    } else {
+      const res = stepBody(this.player, input, this.inst.world, dt, frame.push);
+      died = res.died;
+      if (res.jumped) events.push({ type: 'sfx', name: 'jump' });
+      if (res.landed) events.push({ type: 'sfx', name: 'land' });
+    }
 
     if (frame.cameraX !== undefined) this.camera.setX(frame.cameraX);
     else this.camera.follow(this.player);
 
-    if (frame.kill || res.died) {
+    if (frame.kill || died) {
       this.deaths++;
       this.dying = DEATH_DELAY;
       this.deathAt = { x: this.player.x, y: Math.min(this.player.y, this.level.rows * 16 - 8) };

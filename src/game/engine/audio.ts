@@ -72,6 +72,11 @@ export class AudioEngine {
         this.tone(990, 0.18, 'triangle', 0.08, undefined, 0.07);
         break;
       case 'miss': this.tone(150, 0.12, 'square', 0.04, 100); break;
+      case 'bleat':
+        this.tone(430, 0.28, 'sawtooth', 0.04, 330);
+        this.tone(440, 0.28, 'sawtooth', 0.03, 320, 0.02);
+        break;
+      case 'thunder': this.tone(70, 0.7, 'sawtooth', 0.1, 28); break;
     }
   }
 
