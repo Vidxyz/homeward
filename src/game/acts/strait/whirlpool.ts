@@ -1,5 +1,5 @@
 export const SCROLL_START = 45;
-export const SCROLL_END = 90; // about the player's own running speed: no room to dawdle at the end
+export const SCROLL_END = 75; // still brisk, but clearly slower than a running player (90): the cave-in never quite catches you
 
 /** How fast the strait scrolls (px/s), building steadily across the act. */
 export function scrollSpeed(progress: number): number {

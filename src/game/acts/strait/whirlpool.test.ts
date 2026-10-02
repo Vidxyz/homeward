@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { PULL_MAX, PULL_RANGE, SCROLL_END, SCROLL_START, scrollSpeed, whirlpoolPull } from './whirlpool';
 
 describe('scrollSpeed', () => {
-  it('starts gentle and builds to nearly the player\'s running speed', () => {
+  it('starts gentle and builds to a brisk pace that is still slower than a running player (90 px/s)', () => {
     expect(scrollSpeed(0)).toBe(SCROLL_START);
     expect(scrollSpeed(1)).toBe(SCROLL_END);
-    expect(SCROLL_END).toBeGreaterThanOrEqual(85);
+    expect(SCROLL_END).toBeGreaterThan(SCROLL_START);
+    expect(SCROLL_END).toBeLessThan(90);
     let last = 0;
     for (let p = 0; p <= 1; p += 0.1) {
       expect(scrollSpeed(p)).toBeGreaterThanOrEqual(last);
