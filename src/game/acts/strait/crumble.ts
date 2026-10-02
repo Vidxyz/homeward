@@ -7,24 +7,28 @@ export interface CrumbleSpec {
 
 export type CrumbleState = 'solid' | 'shaking' | 'fallen';
 
-const SHAKE_TIME = 0.5;
 const FALLEN_TIME = 3.5;
+const RUN_SPEED = 90;
 
 /** A platform that gives way shortly after it is stood on, and re-forms a few seconds later. */
 export class CrumblePlatform {
   state: CrumbleState = 'solid';
   /** How far (px) the fallen slab has dropped, for drawing. */
   fall = 0;
+  /** How long it holds after being stepped on: long enough to run across at full speed, plus a margin. */
+  readonly shakeTime: number;
   private timer = 0;
 
-  constructor(readonly spec: CrumbleSpec) {}
+  constructor(readonly spec: CrumbleSpec) {
+    this.shakeTime = 0.4 + (spec.width * 16) / RUN_SPEED;
+  }
 
   /** Standing on it only starts the countdown; jumping off does not stop it. */
   update(dt: number, standing: boolean): void {
     if (this.state === 'solid') {
       if (standing) {
         this.state = 'shaking';
-        this.timer = SHAKE_TIME;
+        this.timer = this.shakeTime;
       }
     } else if (this.state === 'shaking') {
       this.timer -= dt;

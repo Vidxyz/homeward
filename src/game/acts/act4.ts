@@ -20,6 +20,7 @@ const ACTIVE = 0.35;
 const STRIKE_HALF_WIDTH = 10;
 const LOGS_FROM = 0.65; // thrown wreckage starts this far through the act
 const LOG_EVERY = 3.2;
+const FOLLOW_AHEAD = 200; // the screen is never more than this far behind a player who runs ahead
 const START_GRACE = 1.5; // at the start and after each respawn the screen holds still while you get moving
 
 interface Layout {
@@ -62,7 +63,11 @@ export function layoutAct4(): Layout {
       b.rect(p.col, p.row, p.width, 2, '.');
       crumbles.push({ col: p.col, row: p.row, width: p.width, thickness: 2 });
     } else if (p.width >= 5 && progress > 0.1 && rng() < 0.4) {
-      b.put(p.col + 2, p.row - 1, '^'); // a spike to hop over, with room either side
+      // A spike to hop over. A full-speed jump over a short gap can land up to ~3 tiles in, so only put one on
+      // the 4th tile, and only after a gap of 2+: the landing is then always clear of it.
+      const prev = end.platforms[i - 1];
+      const gap = p.col - (prev.col + prev.width);
+      if (gap >= 2) b.put(p.col + 3, p.row - 1, '^');
     }
   });
 
@@ -114,6 +119,8 @@ class StraitAct implements ActInstance {
     const progress = this.progress();
     if (this.grace > 0) this.grace -= dt;
     else this.camX = Math.min(this.maxCamX, this.camX + scrollSpeed(progress) * dt);
+    // Run ahead and the screen follows, so the right edge is never a wall you can get trapped against.
+    this.camX = Math.min(this.maxCamX, Math.max(this.camX, player.x + player.w / 2 - FOLLOW_AHEAD));
 
     // The right edge of the screen is a wall.
     const maxX = this.camX + VIEW_W - player.w;

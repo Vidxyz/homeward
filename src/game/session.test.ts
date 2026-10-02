@@ -349,10 +349,27 @@ describe('Session (Act 4)', () => {
 });
 
 describe('Act 4 additions', () => {
+  it('pulls the screen along with a player who runs ahead of the scroll', () => {
+    const s = new Session(4);
+    const inst = s.inst as unknown as { camX: number };
+    inst.camX = 400;
+    s.player.x = 400 + 300; // far ahead of the screen
+    s.player.y = 10;
+    s.update(DT, NO_INPUT);
+    expect(inst.camX).toBeGreaterThanOrEqual(s.player.x + s.player.w / 2 - 200 - 1);
+  });
+
   it('has crumbling platforms and spikes, and keeps checkpoint platforms solid and clear', () => {
     const layout = layoutAct4();
     expect(layout.crumbles.length).toBeGreaterThanOrEqual(5);
     expect(layout.rows.some((r) => r.includes('^'))).toBe(true);
+    // every spike has at least three solid tiles of platform to its left (a safe landing)
+    layout.rows.forEach((row, r) => {
+      [...row].forEach((ch, c) => {
+        if (ch !== '^') return;
+        for (let k = 1; k <= 3; k++) expect(layout.rows[r + 1][c - k], `spike at ${c},${r}`).toBe('#');
+      });
+    });
     for (const c of layout.crumbles) expect(layout.rows[c.row - 1][c.col + 1]).not.toBe('C');
   });
 
@@ -366,7 +383,7 @@ describe('Act 4 additions', () => {
     s.player.y = spec.row * 16 - 14;
     for (let i = 0; i < 20; i++) s.update(DT, NO_INPUT); // settle onto it, held still by the start grace
     expect(platform.state).not.toBe('solid');
-    for (let i = 0; i < 20; i++) s.update(DT, NO_INPUT);
+    for (let i = 0; i < 60 * 2; i++) s.update(DT, NO_INPUT); // a still player does not last long on it
     expect(platform.state).toBe('fallen');
   });
 });
