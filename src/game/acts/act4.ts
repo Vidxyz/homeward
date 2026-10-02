@@ -10,6 +10,7 @@ import { TILE, VIEW_H, VIEW_W, overlaps, type InputState, type SfxName, type Vec
 import { CrumblePlatform, type CrumbleSpec } from './strait/crumble';
 import { logActive, logBox, spawnLog, updateLog, type Log } from './strait/debris';
 import { chooseKind, planVolley, volleyEvery, warnTime } from './strait/strikes';
+import { Sprint } from './strait/sprint';
 import { scrollSpeed, whirlpoolPull } from './strait/whirlpool';
 import { finishPier, genPath, mulberry32 } from './pathGen';
 import type { ActFrame, ActInstance, ActModule } from './types';
@@ -97,6 +98,7 @@ class StraitAct implements ActInstance {
   private readonly rng = mulberry32(99);
   private readonly maxCamX: number;
   private readonly crumbles: CrumblePlatform[];
+  private readonly sprint = new Sprint();
 
   constructor(
     level: Level,
@@ -113,9 +115,12 @@ class StraitAct implements ActInstance {
     return Math.min(1, this.camX / this.maxCamX);
   }
 
-  update(dt: number, player: Body, _input: InputState): ActFrame {
+  update(dt: number, player: Body, input: InputState): ActFrame {
     this.t += dt;
     const sfx: SfxName[] = [];
+    player.maxAirJumps = 1; // the strait is too hard on one jump: Odysseus may leap twice before he lands
+    // Hold ACTION while running to sprint. It only costs stamina when you are actually moving.
+    player.speedScale = this.sprint.update(dt, input.action && (input.left || input.right));
     const progress = this.progress();
     if (this.grace > 0) this.grace -= dt;
     else this.camX = Math.min(this.maxCamX, this.camX + scrollSpeed(progress) * dt);
@@ -193,6 +198,7 @@ class StraitAct implements ActInstance {
     this.nextVolley = 2.2;
     this.nextLog = LOG_EVERY;
     this.grace = START_GRACE;
+    this.sprint.reset();
     for (const c of this.crumbles) c.reset();
     return this.camX;
   }
@@ -262,8 +268,21 @@ class StraitAct implements ActInstance {
     streaks(r, this.t, { count: 28, color: palette.foam, vx: 90, vy: 0, len: 5, alpha: 0.3 });
     streaks(r, this.t, { count: 16, color: palette.foam, vx: -140, vy: 0, len: 7, alpha: 0.25 }); // the drag
 
-    if (this.t < 5) r.text('Scylla aims ahead. Stay on the move.', VIEW_W / 2, 30, '#ffffff', 1, 'center', Math.min(1, 5 - this.t));
-    else if (this.t < 10) r.text('Cracked rock crumbles underfoot.', VIEW_W / 2, 30, '#ffffff', 1, 'center', Math.min(1, 10 - this.t));
+    // Stamina for the sprint.
+    r.screenRect(8, 164, 60, 6, '#000000', 0.5);
+    r.screenRect(9, 165, 58 * this.sprint.value, 4, this.sprint.winded ? '#e08a3a' : '#6fb7e8');
+    r.text(this.sprint.winded ? 'WINDED' : 'SPRINT', 74, 170, '#ffffff', 1, 'left', 0.85);
+
+    const hints = [
+      'Jump again in mid-air to double jump.',
+      'Hold ACTION to sprint. It tires you out.',
+      'Scylla aims ahead. Stay on the move.',
+      'Cracked rock crumbles underfoot.',
+    ];
+    const slot = Math.floor(this.t / 5);
+    if (slot < hints.length) {
+      r.text(hints[slot], VIEW_W / 2, 30, '#ffffff', 1, 'center', Math.min(1, (slot + 1) * 5 - this.t));
+    }
   }
 }
 
@@ -274,7 +293,7 @@ export const act4: ActModule = {
   name: 'Scylla and Charybdis',
   intro: [
     'A narrow strait. Below, the whirlpool. Above, the six-headed hunger of Scylla.',
-    'She aims where you are going, and the cracked rock will not hold you. Do not stop. Do not look back.',
+    'She aims where you are going, and the cracked rock will not hold you. You may leap twice before you land, and run hard for a while. Do not stop. Do not look back.',
   ],
   palette,
   music: TRACKS[3],

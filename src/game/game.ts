@@ -151,6 +151,10 @@ export class Game {
       return;
     }
     const b = s.player;
+    if (b.airJumpAge < 0.25) {
+      const k = b.airJumpAge / 0.25; // a ring of air where the second jump kicked off
+      r.circle(b.x + b.w / 2, b.y + b.h, 3 + k * 9, '#ffffff', false, 0.8 * (1 - k));
+    }
     if (s.inst.drawPlayer?.(r, b, alpha, s.time)) return;
     const x = lerp(b.px, b.x, alpha) - 1;
     const y = lerp(b.py, b.y, alpha) - 2;

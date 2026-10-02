@@ -348,6 +348,46 @@ describe('Session (Act 4)', () => {
   });
 });
 
+describe('double jump', () => {
+  it('Act 4 gives the player one extra jump in mid-air, and the other acts do not', () => {
+    for (const act of [1, 2, 3, 4, 5]) {
+      const s = new Session(act);
+      s.update(DT, NO_INPUT);
+      expect(s.player.maxAirJumps, `act ${act}`).toBe(act === 4 ? 1 : 0);
+    }
+  });
+
+  it('a second press in the air makes a second jump in Act 4', () => {
+    const s = new Session(4);
+    run(s, 10); // settle on the pier
+    const jump = { ...NO_INPUT, jump: true, jumpPressed: true };
+    const events: SessionEvent[] = [];
+    events.push(...s.update(DT, jump));
+    for (let i = 0; i < 20; i++) s.update(DT, { ...NO_INPUT, jump: true });
+    const vyBefore = s.player.vy;
+    events.push(...s.update(DT, jump));
+    expect(s.player.vy).toBeLessThan(vyBefore - 150);
+    expect(events.filter((e) => e.type === 'sfx' && e.name === 'jump')).toHaveLength(2);
+  });
+});
+
+describe('Act 4 sprint', () => {
+  it('holding ACTION while running makes the player faster, and drains the stamina bar', () => {
+    const walk = new Session(4);
+    const sprint = new Session(4);
+    run(walk, 40, right);
+    run(sprint, 40, { ...NO_INPUT, right: true, action: true });
+    expect(sprint.player.x - 35).toBeGreaterThan((walk.player.x - 35) * 1.15);
+    expect((sprint.inst as unknown as { sprint: { value: number } }).sprint.value).toBeLessThan(1);
+  });
+
+  it('costs nothing while standing still', () => {
+    const s = new Session(4);
+    run(s, 60, { ...NO_INPUT, action: true });
+    expect((s.inst as unknown as { sprint: { value: number } }).sprint.value).toBe(1);
+  });
+});
+
 describe('Act 4 additions', () => {
   it('pulls the screen along with a player who runs ahead of the scroll', () => {
     const s = new Session(4);

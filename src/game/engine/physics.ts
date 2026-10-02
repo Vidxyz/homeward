@@ -8,6 +8,7 @@ export const PHYS = {
   accelGround: 1100,
   accelAir: 700,
   jumpV: -300,
+  airJumpV: -270, // an extra jump in mid-air is a little weaker than the first
   jumpCutV: -110,
   coyote: 0.1,
   buffer: 0.1,
@@ -25,6 +26,12 @@ export interface Body {
   coyote: number;
   buffer: number;
   speedScale: number;
+  /** How many extra jumps in mid-air this body may make before it lands (0 = none). Set by the act. */
+  maxAirJumps: number;
+  /** Extra jumps used since last standing on something. */
+  airJumps: number;
+  /** Seconds since the last mid-air jump, for drawing a puff. */
+  airJumpAge: number;
   /** Position at the start of the last step; used for render interpolation. */
   px: number;
   py: number;
@@ -34,6 +41,8 @@ export interface StepResult {
   died: boolean;
   jumped: boolean;
   landed: boolean;
+  /** True on the tick of a mid-air jump (which also counts as `jumped`). */
+  airJumped: boolean;
 }
 
 /** A 10x14 body standing on the tile whose top-left corner is `pos`. */
@@ -50,6 +59,9 @@ export function bodyAt(pos: Vec): Body {
     coyote: 0,
     buffer: 0,
     speedScale: 1,
+    maxAirJumps: 0,
+    airJumps: 0,
+    airJumpAge: 99,
     px: x,
     py: y,
   };
@@ -89,6 +101,7 @@ export function stepBody(
 ): StepResult {
   b.px = b.x;
   b.py = b.y;
+  b.airJumpAge += dt;
 
   const dir = Number(inp.right) - Number(inp.left);
   if (dir !== 0) b.facing = dir > 0 ? 1 : -1;
@@ -105,6 +118,15 @@ export function stepBody(
     b.coyote = 0;
     b.onGround = false;
     jumped = true;
+  }
+  let airJumped = false;
+  if (!jumped && inp.jumpPressed && !b.onGround && b.coyote <= 0 && b.airJumps < b.maxAirJumps) {
+    b.vy = PHYS.airJumpV;
+    b.airJumps++;
+    b.airJumpAge = 0;
+    b.buffer = 0;
+    jumped = true;
+    airJumped = true;
   }
   if (!inp.jump && b.vy < PHYS.jumpCutV) b.vy = PHYS.jumpCutV;
   b.vy = Math.min(b.vy + PHYS.gravity * dt, PHYS.maxFall);
@@ -131,6 +153,8 @@ export function stepBody(
     b.vy = 0;
   }
 
+  if (b.onGround) b.airJumps = 0;
+
   const died = overlapsDeadly(b, w) || b.y > w.rows * TILE || b.y + b.h > w.waterY();
-  return { died, jumped, landed: !wasGround && b.onGround };
+  return { died, jumped, landed: !wasGround && b.onGround, airJumped };
 }

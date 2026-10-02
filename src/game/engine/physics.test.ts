@@ -32,6 +32,81 @@ function run(body: Body, world: ReturnType<typeof makeWorld>, frames: number, in
   return last;
 }
 
+describe('air jumps', () => {
+  const press = input({ jump: true, jumpPressed: true });
+
+  function inAir(maxAirJumps: number) {
+    const { world, body } = setup();
+    body.maxAirJumps = maxAirJumps;
+    run(body, world, 5, NO_INPUT);
+    stepBody(body, press, world, DT); // the normal jump off the floor
+    for (let i = 0; i < 20; i++) stepBody(body, input({ jump: true }), world, DT); // rising, well clear of the floor
+    expect(body.onGround).toBe(false);
+    return { world, body };
+  }
+
+  it('does nothing by default: pressing jump in the air is ignored', () => {
+    const { world, body } = inAir(0);
+    const vy = body.vy;
+    const res = stepBody(body, press, world, DT);
+    expect(res.jumped).toBe(false);
+    expect(body.vy).toBeGreaterThanOrEqual(vy);
+  });
+
+  it('gives one extra jump in mid-air when allowed', () => {
+    const { world, body } = inAir(1);
+    const res = stepBody(body, press, world, DT);
+    expect(res.jumped).toBe(true);
+    expect(body.vy).toBeLessThan(-200);
+    expect(body.airJumps).toBe(1);
+  });
+
+  it('only one: a second press in the air does nothing', () => {
+    const { world, body } = inAir(1);
+    stepBody(body, press, world, DT);
+    for (let i = 0; i < 10; i++) stepBody(body, input({ jump: true }), world, DT);
+    const res = stepBody(body, press, world, DT);
+    expect(res.jumped).toBe(false);
+  });
+
+  it('is restored on landing', () => {
+    const { world, body } = inAir(1);
+    stepBody(body, press, world, DT);
+    for (let i = 0; i < 120; i++) stepBody(body, NO_INPUT, world, DT);
+    expect(body.onGround).toBe(true);
+    expect(body.airJumps).toBe(0);
+  });
+
+  it('carries the player higher than the first jump alone', () => {
+    const single = inAir(0);
+    const double = inAir(1);
+    let minSingle = single.body.y;
+    let minDouble = double.body.y;
+    stepBody(double.body, press, double.world, DT);
+    for (let i = 0; i < 90; i++) {
+      stepBody(single.body, input({ jump: true }), single.world, DT);
+      stepBody(double.body, input({ jump: true }), double.world, DT);
+      minSingle = Math.min(minSingle, single.body.y);
+      minDouble = Math.min(minDouble, double.body.y);
+    }
+    expect(minDouble).toBeLessThan(minSingle - 20);
+  });
+
+  it('does not use the air jump when jumping from the floor or just after leaving a ledge', () => {
+    const { world, body } = setup();
+    body.maxAirJumps = 1;
+    run(body, world, 5, NO_INPUT);
+    stepBody(body, press, world, DT);
+    expect(body.airJumps).toBe(0);
+    const ledge = setup();
+    ledge.body.maxAirJumps = 1;
+    ledge.body.onGround = false;
+    ledge.body.coyote = 0.05;
+    stepBody(ledge.body, press, ledge.world, DT);
+    expect(ledge.body.airJumps).toBe(0);
+  });
+});
+
 describe('stepBody', () => {
   it('falls and settles on the floor', () => {
     const { world, body } = setup();
