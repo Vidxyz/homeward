@@ -9,7 +9,7 @@ pnpm install
 pnpm dev        # http://localhost:3000
 ```
 
-Every act is unlocked from the start: pick one on the title screen (acts you have not started yet show as ???, to avoid spoilers), or open the pause menu and choose Main menu. The intro cards have a Back button too.
+Every act is unlocked from the start: pick one on the title screen, or open the pause menu and choose Main menu. The intro cards have a Back button too.
 
 Controls: arrows or WASD to move, Space/Up/Z to jump, X/S/Shift for the action button, Esc or P to pause. On touch devices, on-screen buttons appear.
 

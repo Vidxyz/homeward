@@ -5,7 +5,7 @@ import { ACTS } from '@/game/acts';
 import type { Input } from '@/game/engine/input';
 import { Game } from '@/game/game';
 import { DEFAULT_SAVE, loadSave, writeSave, type SaveData } from '@/game/save';
-import { ENDING_LINES, ROMAN, actLabel } from '@/game/story';
+import { ENDING_LINES, ROMAN } from '@/game/story';
 import type { Key } from '@/game/types';
 
 type Screen = 'title' | 'narration' | 'playing' | 'paused' | 'ending';
@@ -40,7 +40,6 @@ export default function Homeward() {
   const [act, setAct] = useState(1);
   const [deaths, setDeaths] = useState(0);
   const [furthest, setFurthest] = useState(1);
-  const [seen, setSeen] = useState<number[]>([1]);
   const [muted, setMuted] = useState(false);
 
   const persist = useCallback((patch: Partial<SaveData>) => {
@@ -54,7 +53,6 @@ export default function Homeward() {
     const save = loadSave();
     saveRef.current = save;
     setFurthest(save.furthestAct);
-    setSeen(save.seen);
     setDeaths(save.deaths);
     setMuted(save.muted);
 
@@ -141,11 +139,6 @@ export default function Homeward() {
       persist({ furthestAct: act });
       setFurthest(act);
     }
-    if (!saveRef.current.seen.includes(act)) {
-      const nextSeen = [...saveRef.current.seen, act].sort((x, y) => x - y);
-      persist({ seen: nextSeen });
-      setSeen(nextSeen);
-    }
     setScreen('playing');
   };
 
@@ -157,7 +150,6 @@ export default function Homeward() {
   };
 
   const current = ACTS[act - 1];
-  const actNames = ACTS.map((a) => a.name);
 
   return (
     <main className="shell">
@@ -182,7 +174,7 @@ export default function Homeward() {
               <div className="acts-row">
                 {ACTS.map((a) => (
                   <button key={a.id} className="chip" onClick={() => jumpToAct(a.id)}>
-                    {actLabel(a.id, seen, actNames)}
+                    {ROMAN[a.id - 1]} · {a.name}
                   </button>
                 ))}
               </div>
