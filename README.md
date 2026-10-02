@@ -18,7 +18,7 @@ Controls: arrows or WASD to move, Space/Up/Z to jump, X/S/Shift for the action b
 1. **The Storm**: sail a ship through the sliding gaps in reef walls, dodging lightning and reading the gusts. Up/Down steer with the jump/action keys.
 2. **The Cyclops' Cave**: two parts. Sneak to his den past an erratic giant, a sheepdog, sleeping giants, falling stalactites and flaring braziers (shadows hide you only if you are still or creeping; hold ACTION to creep), then take the stake to blind him and escape while he hunts by sound. Running, jumping and landing are loud; the stampeding flock masks the noise.
 3. **The Sirens**: resist the song's pull by pressing ACTION on the beat.
-4. **Scylla and Charybdis**: an auto-scrolling chase.
+4. **Scylla and Charybdis**: an accelerating auto-scrolling chase. Scylla aims where you are going (stopping doesn't help) and escalates from single strikes to patterns, cracked platforms crumble underfoot, the whirlpool drags at you, spikes need hopping, and late on Charybdis hurls wreckage along the rocks.
 5. **Ithaca**: the walk home.
 
 ## Develop

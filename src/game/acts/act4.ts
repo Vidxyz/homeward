@@ -45,7 +45,7 @@ export function layoutAct4(): Layout {
     minRow: 6,
     maxRow: 9,
     minWidth: 3,
-    maxWidth: 5,
+    maxWidth: 6,
     maxGap: (p) => (p < 0.3 ? 2 : 3),
     thickness: 2,
     seed: 44,
@@ -62,7 +62,7 @@ export function layoutAct4(): Layout {
     if (rng() < 0.25 + 0.35 * progress) {
       b.rect(p.col, p.row, p.width, 2, '.');
       crumbles.push({ col: p.col, row: p.row, width: p.width, thickness: 2 });
-    } else if (p.width >= 5 && progress > 0.1 && rng() < 0.4) {
+    } else if (p.width >= 4 && progress > 0.08 && rng() < 0.7) {
       // A spike to hop over. A full-speed jump over a short gap can land up to ~3 tiles in, so only put one on
       // the 4th tile, and only after a gap of 2+: the landing is then always clear of it.
       const prev = end.platforms[i - 1];

@@ -362,7 +362,7 @@ describe('Act 4 additions', () => {
   it('has crumbling platforms and spikes, and keeps checkpoint platforms solid and clear', () => {
     const layout = layoutAct4();
     expect(layout.crumbles.length).toBeGreaterThanOrEqual(5);
-    expect(layout.rows.some((r) => r.includes('^'))).toBe(true);
+    expect(layout.rows.join('').split('^').length - 1).toBeGreaterThanOrEqual(3); // at least three spikes
     // every spike has at least three solid tiles of platform to its left (a safe landing)
     layout.rows.forEach((row, r) => {
       [...row].forEach((ch, c) => {
