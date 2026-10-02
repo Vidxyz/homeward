@@ -72,12 +72,69 @@ export class AudioEngine {
         this.tone(990, 0.18, 'triangle', 0.08, undefined, 0.07);
         break;
       case 'miss': this.tone(150, 0.12, 'square', 0.04, 100); break;
-      case 'bleat':
-        this.tone(430, 0.28, 'sawtooth', 0.04, 330);
-        this.tone(440, 0.28, 'sawtooth', 0.03, 320, 0.02);
+      case 'bleat': this.baa(0.9 + Math.random() * 0.35); break;
+      case 'bark':
+        this.tone(320, 0.09, 'square', 0.08, 160);
+        this.tone(300, 0.09, 'square', 0.08, 150, 0.14);
         break;
+      case 'howl': this.tone(150, 1.1, 'sawtooth', 0.12, 45); break;
+      case 'crash': this.noiseBurst(0.35, 0.16); break;
       case 'thunder': this.tone(70, 0.7, 'sawtooth', 0.1, 28); break;
     }
+  }
+
+  /** A sheep's "baaa": a warbling sawtooth through a vowel-like band-pass filter. */
+  private baa(pitch: number): void {
+    if (!this.ctx || !this.master) return;
+    const c = this.ctx;
+    const t0 = c.currentTime;
+    const dur = 0.6;
+    const osc = c.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(340 * pitch, t0);
+    osc.frequency.linearRampToValueAtTime(250 * pitch, t0 + dur);
+    const lfo = c.createOscillator(); // the quick wobble that makes a bleat a bleat
+    lfo.frequency.value = 24;
+    const lfoDepth = c.createGain();
+    lfoDepth.gain.value = 30 * pitch;
+    lfo.connect(lfoDepth);
+    lfoDepth.connect(osc.frequency);
+    const vowel = c.createBiquadFilter();
+    vowel.type = 'bandpass';
+    vowel.frequency.value = 1050;
+    vowel.Q.value = 3;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.22, t0 + 0.05);
+    g.gain.setValueAtTime(0.22, t0 + dur * 0.55);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(vowel);
+    vowel.connect(g);
+    g.connect(this.master);
+    osc.start(t0);
+    lfo.start(t0);
+    osc.stop(t0 + dur + 0.02);
+    lfo.stop(t0 + dur + 0.02);
+  }
+
+  private noiseBurst(dur: number, vol: number): void {
+    if (!this.ctx || !this.master) return;
+    const c = this.ctx;
+    const len = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 700;
+    const g = c.createGain();
+    g.gain.value = vol;
+    src.connect(lp);
+    lp.connect(g);
+    g.connect(this.master);
+    src.start();
   }
 
   startMusic(track: Track | null): void {
