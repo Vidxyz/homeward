@@ -67,6 +67,12 @@ export class Game {
     this.audio.startMusic(this.session.act.music);
   }
 
+  /** Dev/test hook: advance the simulation synchronously (works in background tabs where rAF is throttled). */
+  debugAdvance(frames: number): void {
+    for (let i = 0; i < frames && this.running; i++) this.step();
+    this.render(1);
+  }
+
   destroy(): void {
     cancelAnimationFrame(this.raf);
     this.detachInput();
@@ -106,6 +112,7 @@ export class Game {
     const p = s.act.palette;
     const camX = lerp(s.camera.px, s.camera.x, alpha);
     const camY = lerp(s.camera.py, s.camera.y, alpha);
+    r.textVisible = this.running;
     r.begin(camX, camY);
 
     s.inst.drawBack(r, camX, camY);
@@ -154,7 +161,7 @@ export class Game {
   private drawHud(r: Renderer, s: Session): void {
     const p = s.act.palette;
     r.text(`DEATHS ${s.deaths}`, 6, VIEW_H - 6, '#ffffff', 7, 'left', 0.7);
-    if (s.time < 3.5) {
+    if (s.time > 0 && s.time < 3.5) {
       const a = Math.min(1, 3.5 - s.time);
       r.text(`ACT ${ROMAN[s.act.id - 1]}`, VIEW_W / 2, 50, p.accent, 10, 'center', a);
       r.text(s.act.name.toUpperCase(), VIEW_W / 2, 64, '#ffffff', 8, 'center', a);

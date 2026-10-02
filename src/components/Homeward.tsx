@@ -77,6 +77,9 @@ export default function Homeward() {
     });
     game.audio.setMuted(save.muted);
     gameRef.current = game;
+    if (process.env.NODE_ENV !== 'production') {
+      (window as unknown as { __homeward?: Game }).__homeward = game; // dev-only hook for scripted playtests
+    }
     return () => {
       game.destroy();
       gameRef.current = null;

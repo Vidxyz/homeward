@@ -6,6 +6,8 @@ import { TILE, VIEW_H, VIEW_W } from '../types';
 export class Renderer {
   private ox = 0;
   private oy = 0;
+  /** Canvas text is hidden while HTML overlays (menus, narration, pause) are up. */
+  textVisible = true;
 
   constructor(readonly ctx: CanvasRenderingContext2D) {
     ctx.imageSmoothingEnabled = false;
@@ -54,6 +56,7 @@ export class Renderer {
     align: CanvasTextAlign = 'left',
     alpha = 1,
   ): void {
+    if (!this.textVisible) return;
     const c = this.ctx;
     c.globalAlpha = alpha;
     c.fillStyle = color;
