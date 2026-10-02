@@ -56,6 +56,19 @@ describe('Flock grazing', () => {
   });
 });
 
+describe('Flock random bleating', () => {
+  it('is audible but never alerts the listener (only a bump does)', () => {
+    const world = caveWorld();
+    const flock = new Flock([800, 1000], mulberry32(3));
+    const sfx: SfxName[] = [];
+    const heard: number[] = [];
+    const far = player(4000);
+    for (let i = 0; i < 60 * 60; i++) flock.update(1 / 60, world, far, sfx, (x) => heard.push(x));
+    expect(sfx.filter((n) => n === 'bleat').length).toBeGreaterThan(5);
+    expect(heard).toHaveLength(0);
+  });
+});
+
 describe('Flock stampede', () => {
   it('runs every sheep to the right in clusters, and wraps them round at the end', () => {
     const world = caveWorld();

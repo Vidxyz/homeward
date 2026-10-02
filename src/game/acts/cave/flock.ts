@@ -74,8 +74,8 @@ export class Flock {
   }
 
   /**
-   * Moves the sheep and resolves the player against them. `onBleat(x)` is called when a sheep bleats loudly
-   * enough to be heard (a bump, or a random bleat while grazing).
+   * Moves the sheep and resolves the player against them. `onBleat(x)` is called when a sheep is bumped
+   * by the player: that is the only bleat loud enough to alert the Cyclops.
    */
   update(dt: number, world: World, player: Mover, sfx: SfxName[], onBleat: (x: number) => void): void {
     for (const s of this.sheep) {
@@ -87,8 +87,7 @@ export class Flock {
         this.graze(s, dt, world);
         if (s.nextBleat <= 0) {
           s.nextBleat = 7 + this.rng() * 8;
-          this.bleat(s, sfx);
-          onBleat(s.x);
+          this.bleat(s, sfx); // idle bleating is just noise: it does not alert anyone
         }
       } else {
         s.x += s.vx * dt;

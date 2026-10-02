@@ -37,7 +37,7 @@ import type { ActFrame, ActInstance, ActModule } from './types';
 
 const palette = PALETTES[1];
 
-const SEEN_AFTER = 0.7;
+const SEEN_AFTER = 1.1;
 const GRACE = 1.5;
 const CYCLOPS_START = 30 * TILE;
 const SIGHTED_BOUNDS = { min: 8 * TILE, max: 92 * TILE };
@@ -273,7 +273,7 @@ class CaveAct implements ActInstance {
       return s < 8 ? { text: 'He hunts by sound. Creep. Stay near the sheep.', fade: 8 - s } : null;
     }
     if (s < 6) return { text: 'Hold ACTION to creep. Shadows need you still.', fade: 6 - s };
-    if (s < 12) return { text: 'Dogs, sheep and falling rock are loud.', fade: 12 - s };
+    if (s < 12) return { text: 'Dogs, bumped sheep and falling rock are loud.', fade: 12 - s };
     if (s < 18) return { text: 'Creep to his den. Take the stake.', fade: 18 - s };
     return null;
   }
