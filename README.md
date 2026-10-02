@@ -9,6 +9,8 @@ pnpm install
 pnpm dev        # http://localhost:3000
 ```
 
+Debug mode: `pnpm dev:debug` (sets `NEXT_PUBLIC_DEBUG=1`) adds a toggle on the title screen with buttons to jump straight to any act.
+
 Controls: arrows or WASD to move, Space/Up/Z to jump, X/S/Shift for the action button, Esc or P to pause. On touch devices, on-screen buttons appear.
 
 ## The five acts
