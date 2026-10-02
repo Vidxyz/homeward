@@ -2,9 +2,11 @@ export interface SaveData {
   furthestAct: number;
   deaths: number;
   muted: boolean;
+  /** The acts that have been started (their names are revealed on the act picker). Always includes Act 1. */
+  seen: number[];
 }
 
-export const DEFAULT_SAVE: SaveData = { furthestAct: 1, deaths: 0, muted: false };
+export const DEFAULT_SAVE: SaveData = { furthestAct: 1, deaths: 0, muted: false, seen: [1] };
 export const SAVE_KEY = 'homeward.save.v1';
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
@@ -23,6 +25,13 @@ function clampInt(v: unknown, min: number, max: number, fallback: number): numbe
     : fallback;
 }
 
+function cleanSeen(v: unknown): number[] {
+  const acts = Array.isArray(v) ? v : [];
+  const set = new Set<number>([1]);
+  for (const a of acts) if (typeof a === 'number' && Number.isInteger(a) && a >= 1 && a <= 5) set.add(a);
+  return [...set].sort((x, y) => x - y);
+}
+
 export function loadSave(storage: StorageLike | null = defaultStorage()): SaveData {
   try {
     const raw = storage?.getItem(SAVE_KEY);
@@ -32,6 +41,7 @@ export function loadSave(storage: StorageLike | null = defaultStorage()): SaveDa
       furthestAct: clampInt(p.furthestAct, 1, 5, 1),
       deaths: clampInt(p.deaths, 0, 1_000_000, 0),
       muted: p.muted === true,
+      seen: cleanSeen(p.seen),
     };
   } catch {
     return { ...DEFAULT_SAVE };

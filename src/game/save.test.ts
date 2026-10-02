@@ -26,8 +26,8 @@ describe('save', () => {
 
   it('round-trips data', () => {
     const s = memoryStorage();
-    writeSave({ furthestAct: 3, deaths: 12, muted: true }, s);
-    expect(loadSave(s)).toEqual({ furthestAct: 3, deaths: 12, muted: true });
+    writeSave({ furthestAct: 3, deaths: 12, muted: true, seen: [1, 2, 3] }, s);
+    expect(loadSave(s)).toEqual({ furthestAct: 3, deaths: 12, muted: true, seen: [1, 2, 3] });
   });
 
   it('falls back to defaults on corrupt JSON', () => {
@@ -36,7 +36,18 @@ describe('save', () => {
 
   it('clamps out-of-range values', () => {
     const s = memoryStorage(JSON.stringify({ furthestAct: 99, deaths: -5, muted: 'yes' }));
-    expect(loadSave(s)).toEqual({ furthestAct: 5, deaths: 0, muted: false });
+    expect(loadSave(s)).toEqual({ furthestAct: 5, deaths: 0, muted: false, seen: [1] });
+  });
+
+  it('cleans the list of started acts: always Act 1, only real acts, no duplicates, sorted', () => {
+    const s = memoryStorage(JSON.stringify({ seen: [4, 4, 'x', 9, 2, 0] }));
+    expect(loadSave(s).seen).toEqual([1, 2, 4]);
+    expect(loadSave(memoryStorage(JSON.stringify({ seen: 'nope' }))).seen).toEqual([1]);
+  });
+
+  it('upgrades an older save that has no list of started acts', () => {
+    const s = memoryStorage(JSON.stringify({ furthestAct: 3, deaths: 2, muted: false }));
+    expect(loadSave(s).seen).toEqual([1]);
   });
 
   it('never throws when storage is blocked', () => {
