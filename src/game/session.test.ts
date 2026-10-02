@@ -229,6 +229,8 @@ describe('Session (Act 2, phase 2: the escape)', () => {
     s.player.y = FLOOR_STAND_Y;
     events.push(...s.update(DT, NO_INPUT));
     expect(events).toContainEqual({ type: 'sfx', name: 'howl' });
+    s.player.x = 2600; // well away from him
+    s.player.y = FLOOR_STAND_Y;
     return s;
   }
 

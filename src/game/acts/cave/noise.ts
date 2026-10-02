@@ -2,7 +2,7 @@
 export const CREEP_SCALE = 0.4;
 
 /** How far (px) different things the player does can be heard. */
-export const NOISE_RADIUS = { run: 150, jump: 170, land: 190 } as const;
+export const NOISE_RADIUS = { run: 220, jump: 300, land: 340 } as const;
 
 export interface MoveSample {
   /** Horizontal speed in px/s. */

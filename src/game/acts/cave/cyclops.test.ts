@@ -60,7 +60,7 @@ describe('Cyclops (blinded)', () => {
     expect(c.blind).toBe(true);
     expect(c.mood).toBe('stunned');
     const x0 = c.x;
-    step(c, 2);
+    step(c, 1.2);
     expect(c.x).toBe(x0);
     expect(c.grabs(x0)).toBe(false); // he cannot grab while stunned
   });

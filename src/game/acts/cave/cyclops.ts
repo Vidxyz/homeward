@@ -9,8 +9,8 @@ export interface CyclopsBounds {
 
 const HEARING = 520; // how far a loud noise carries to a sighted Cyclops
 const INVESTIGATE_SPEED = 55;
-const HUNT_SPEED = 62;
-const STUN_TIME = 2.5;
+const HUNT_SPEED = 125; // faster than the player can run, so being heard is dangerous
+const STUN_TIME = 1.5;
 const GRAB_RANGE = 24;
 
 /**
@@ -59,6 +59,8 @@ export class Cyclops {
   }
 
   private startWalking(): void {
+    // A blinded Cyclops lumbers on towards the exit more often than not, so he does not just fall behind.
+    if (this.blind && this.rng() < 0.5) this.dir = 1;
     this.mood = 'walk';
     this.timer = 1 + this.rng() * 2.5;
     this.speed = this.blind ? 18 + this.rng() * 12 : 22 + this.rng() * 18;

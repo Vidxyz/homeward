@@ -41,8 +41,8 @@ const SEEN_AFTER = 0.7;
 const GRACE = 1.5;
 const CYCLOPS_START = 30 * TILE;
 const SIGHTED_BOUNDS = { min: 8 * TILE, max: 92 * TILE };
-const BLIND_START = 80 * TILE;
-const BLIND_BOUNDS = { min: 80 * TILE, max: 182 * TILE };
+const BLIND_START = 87 * TILE; // thrown back just a few steps from the den
+const BLIND_BOUNDS = { min: 84 * TILE, max: 182 * TILE };
 const SHEEP_HOMES = [16, 31, 48, 56, 64, 77, 87].map((c) => c * TILE);
 
 export { buildCaveRows as buildAct2 };
