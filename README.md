@@ -40,6 +40,7 @@ Before committing, run all three of `pnpm test`, `pnpm typecheck` and `pnpm buil
 | Audio | Web Audio synthesis (`engine/audio.ts`). **No audio files** |
 | Tests | Vitest (Node environment, no DOM) |
 | Persistence | `localStorage` only (progress and leaderboard) |
+| Menus | Title (with act picker), intro cards, pause, How to play, ending, leaderboard: all in `Homeward.tsx` |
 | Dependencies | `next`, `react`, `react-dom` at runtime. Nothing else |
 
 Versions are whatever `pnpm add` resolved at the time (Next 16, React 19, TypeScript 7, Vitest 5). **Heed `AGENTS.md`:** this Next.js version has breaking changes from older releases, and its docs ship in `node_modules/next/dist/docs/`. Read the relevant guide there before changing framework-level code (routing, config, metadata).
@@ -85,6 +86,7 @@ src/
     leaderboard.ts     Leaderboard entries, ranking, localStorage
     run.ts             Rules for what counts as a full vs partial run
     story.ts           Roman numerals and the ending text
+    help.ts            Content of the How to Play screen (controls and per-act tips)
     palettes.ts, sprites.ts, music.ts
     engine/            physics.ts, world.ts, camera.ts, checkpoints.ts, input.ts,
                        renderer.ts, font.ts, fx.ts, audio.ts
